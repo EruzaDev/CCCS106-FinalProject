@@ -32,6 +32,9 @@ class UserManagement(ft.Column):
     
     def _build_ui(self):
         """Build the main UI"""
+        # Create file picker and add to page overlay
+        self.file_picker = ft.FilePicker(on_result=self._on_image_selected)
+        
         self.controls = [
             self._build_header(),
             ft.Container(
@@ -51,6 +54,13 @@ class UserManagement(ft.Column):
         ]
         self.expand = True
         self.spacing = 0
+    
+    def did_mount(self):
+        """Called when the control is added to the page"""
+        # Add file picker to page overlay
+        if self.page and self.file_picker not in self.page.overlay:
+            self.page.overlay.append(self.file_picker)
+            self.page.update()
     
     def _build_header(self):
         """Build the header"""
@@ -463,28 +473,38 @@ class UserManagement(ft.Column):
             border_radius=8,
         )
         
-        # Image preview
-        self.image_preview = ft.Container(
-            content=ft.Column(
-                [
-                    ft.Icon(ft.Icons.PERSON, size=48, color="#BDBDBD"),
-                    ft.Text("No image selected", size=12, color="#666666"),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                alignment=ft.MainAxisAlignment.CENTER,
-            ),
-            width=120,
-            height=120,
-            bgcolor="#F5F5F5",
-            border_radius=8,
-            border=ft.border.all(1, "#E0E0E0"),
-            alignment=ft.alignment.center,
-        )
-        
-        # File picker for image
-        self.file_picker = ft.FilePicker(
-            on_result=self._on_image_selected,
-        )
+        # Image preview - show current image if exists
+        if self.politician_image_data:
+            self.image_preview = ft.Container(
+                content=ft.Image(
+                    src_base64=self.politician_image_data,
+                    width=120,
+                    height=120,
+                    fit=ft.ImageFit.COVER,
+                    border_radius=8,
+                ),
+                width=120,
+                height=120,
+                border_radius=8,
+                border=ft.border.all(1, "#E0E0E0"),
+            )
+        else:
+            self.image_preview = ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Icon(ft.Icons.PERSON, size=48, color="#BDBDBD"),
+                        ft.Text("No image selected", size=12, color="#666666"),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                width=120,
+                height=120,
+                bgcolor="#F5F5F5",
+                border_radius=8,
+                border=ft.border.all(1, "#E0E0E0"),
+                alignment=ft.alignment.center,
+            )
         
         return ft.Container(
             content=ft.Column(
@@ -561,7 +581,6 @@ class UserManagement(ft.Column):
                         ],
                         spacing=12,
                     ),
-                    self.file_picker,
                 ],
             ),
             padding=20,
@@ -653,7 +672,7 @@ class UserManagement(ft.Column):
     
     def _pick_image(self):
         """Open file picker for image selection"""
-        if hasattr(self, 'file_picker') and self.file_picker.page:
+        if self.file_picker:
             self.file_picker.pick_files(
                 allowed_extensions=["jpg", "jpeg", "png", "gif"],
                 allow_multiple=False,
@@ -671,17 +690,11 @@ class UserManagement(ft.Column):
                     image_bytes = f.read()
                     self.politician_image_data = base64.b64encode(image_bytes).decode('utf-8')
                 
-                # Update preview
-                self.image_preview.content = ft.Image(
-                    src_base64=self.politician_image_data,
-                    width=120,
-                    height=120,
-                    fit=ft.ImageFit.COVER,
-                    border_radius=8,
-                )
+                # Rebuild UI to show the image
                 self._refresh_ui()
             except Exception as ex:
                 print(f"Error loading image: {ex}")
+                self._show_error(f"Error loading image: {ex}")
     
     def _create_voter(self):
         """Create new voter account"""
