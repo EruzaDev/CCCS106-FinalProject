@@ -93,14 +93,16 @@ class HonestBallotApp:
         self.page.add(home_page)
         self.page.update()
     
-    def handle_login(self, email, password):
+    def handle_login(self, username, password):
         """Handle login attempt"""
-        if not email or not password:
-            self.show_error_dialog("Login Error", "Please enter both email and password.")
+        if not username or not password:
+            self.show_error_dialog("Login Error", "Please enter both username and password.")
             return
         
-        # Verify credentials from database
-        user = self.session_manager.db.verify_user(email, password)
+        # Verify credentials from database (try username first, then email)
+        user = self.session_manager.db.verify_user_by_username(username, password)
+        if not user:
+            user = self.session_manager.db.verify_user(username, password)
         
         if user:
             # Create session

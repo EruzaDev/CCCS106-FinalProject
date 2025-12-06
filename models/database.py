@@ -247,6 +247,30 @@ class Database:
         ''')
         return self.cursor.fetchall()
     
+    def verify_user_by_username(self, username, password):
+        """Verify user credentials by username"""
+        password_hash = self.hash_password(password)
+        self.cursor.execute('''
+            SELECT id, username, email, role FROM users
+            WHERE username = ? AND password_hash = ?
+        ''', (username, password_hash))
+        
+        user = self.cursor.fetchone()
+        if user:
+            # Update last login
+            self.cursor.execute('''
+                UPDATE users SET last_login = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (user[0],))
+            self.connection.commit()
+            return {
+                "id": user[0],
+                "username": user[1],
+                "email": user[2],
+                "role": user[3]
+            }
+        return None
+    
     def close(self):
         """Close database connection"""
         if self.connection:
@@ -263,13 +287,18 @@ def init_demo_data():
         db.close()
         return db  # Database already initialized
     
-    # Create 5 demo users
+    # Create role-based demo users
     demo_users = [
-        ("alice_smith", "alice@honestballot.local", "password123", "voter"),
-        ("bob_johnson", "bob@honestballot.local", "password123", "voter"),
-        ("charlie_brown", "charlie@honestballot.local", "password123", "voter"),
-        ("diana_prince", "diana@honestballot.local", "password123", "voter"),
-        ("eve_wilson", "eve@honestballot.local", "password123", "voter"),
+        # Voter accounts
+        ("voter1", "voter1@honestballot.local", "voter123", "voter"),
+        ("voter2", "voter2@honestballot.local", "voter123", "voter"),
+        ("voter3", "voter3@honestballot.local", "voter123", "voter"),
+        # Politician account
+        ("politician1", "politician1@honestballot.local", "pol123", "politician"),
+        # NBI Officer account
+        ("nbi1", "nbi1@honestballot.local", "nbi123", "nbi"),
+        # COMELEC account
+        ("comelec1", "comelec1@honestballot.local", "com123", "comelec"),
     ]
     
     for username, email, password, role in demo_users:

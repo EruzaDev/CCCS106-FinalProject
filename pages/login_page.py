@@ -1,27 +1,32 @@
 import flet as ft
 
 
-class LoginPage(ft.Column):
-    """Local voting app login page"""
+class LoginPage(ft.Container):
+    """Voting app login page matching the design"""
     
     def __init__(self, on_login, on_create_account, on_forgot_password):
         super().__init__()
-        self.on_login = on_login
+        self.on_login_callback = on_login
         self.on_create_account = on_create_account
         self.on_forgot_password = on_forgot_password
         
         # Form fields
-        self.email_field = ft.TextField(
-            label="Email",
-            width=300,
-            icon=ft.Icons.EMAIL,
+        self.username_field = ft.TextField(
+            label="Username",
+            hint_text="Enter username",
+            width=280,
+            border_radius=8,
+            content_padding=ft.padding.symmetric(horizontal=15, vertical=12),
         )
         
         self.password_field = ft.TextField(
             label="Password",
+            hint_text="Enter password",
             password=True,
-            width=300,
-            icon=ft.Icons.LOCK,
+            can_reveal_password=True,
+            width=280,
+            border_radius=8,
+            content_padding=ft.padding.symmetric(horizontal=15, vertical=12),
         )
         
         self.error_text = ft.Text(
@@ -30,71 +35,192 @@ class LoginPage(ft.Column):
             size=12,
         )
         
-        # Build UI
-        self.controls = [
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text(
-                            "HonestBallot",
-                            size=40,
-                            weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.BLUE,
-                        ),
-                        ft.Text(
-                            "Local Voting System",
-                            size=16,
-                            color=ft.Colors.GREY,
-                        ),
-                        ft.Divider(height=30),
-                        ft.Text("Demo Credentials:", weight=ft.FontWeight.BOLD),
-                        ft.Text(
-                            "alice@honestballot.local / password123\n"
-                            "bob@honestballot.local / password123\n"
-                            "charlie@honestballot.local / password123",
-                            size=11,
-                            color=ft.Colors.GREY_700,
-                        ),
-                        ft.Divider(height=30),
-                        self.email_field,
-                        self.password_field,
-                        self.error_text,
-                        ft.ElevatedButton(
-                            text="Login",
-                            width=300,
-                            icon=ft.Icons.LOGIN,
-                            on_click=self._handle_login,
-                        ),
-                        ft.TextButton(
-                            text="Forgot Password?",
-                            on_click=lambda e: self.on_forgot_password(),
-                        ),
-                        ft.Divider(height=20),
-                        ft.Text("Don't have an account?", text_align=ft.TextAlign.CENTER),
-                        ft.TextButton(
-                            text="Create Account",
-                            on_click=lambda e: self.on_create_account(),
-                        ),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=10,
-                ),
-                padding=50,
-            )
-        ]
-        
-        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-        self.vertical_alignment = ft.MainAxisAlignment.CENTER
+        # Build the login card
+        self.content = self._build_page()
         self.expand = True
+        self.bgcolor = "#E8EAF6"  # Light purple/blue background
+        self.padding = 20
+    
+    def _build_page(self):
+        """Build the complete login page"""
+        return ft.Column(
+            [
+                # Header text
+                ft.Container(
+                    content=ft.Text(
+                        "Voting Web and Mobile App",
+                        size=18,
+                        color="#5C6BC0",
+                        weight=ft.FontWeight.W_400,
+                    ),
+                    padding=ft.padding.only(left=20, top=20),
+                    alignment=ft.alignment.top_left,
+                ),
+                
+                # Centered login card
+                ft.Container(
+                    content=self._build_login_card(),
+                    alignment=ft.alignment.center,
+                    expand=True,
+                ),
+            ],
+            expand=True,
+        )
+    
+    def _build_login_card(self):
+        """Build the white login card"""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    # Logo icon
+                    ft.Container(
+                        content=ft.Icon(
+                            ft.Icons.HOW_TO_VOTE,
+                            size=40,
+                            color=ft.Colors.WHITE,
+                        ),
+                        width=70,
+                        height=70,
+                        bgcolor="#5C6BC0",
+                        border_radius=15,
+                        alignment=ft.alignment.center,
+                    ),
+                    
+                    # App name
+                    ft.Text(
+                        "HonestBallot",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color="#5C6BC0",
+                    ),
+                    
+                    # Tagline
+                    ft.Text(
+                        "Voter Education & Transparency Platform",
+                        size=12,
+                        color=ft.Colors.GREY_600,
+                    ),
+                    
+                    ft.Container(height=20),
+                    
+                    # Username field
+                    self.username_field,
+                    
+                    ft.Container(height=5),
+                    
+                    # Password field
+                    self.password_field,
+                    
+                    # Error text
+                    self.error_text,
+                    
+                    ft.Container(height=10),
+                    
+                    # Login button
+                    ft.ElevatedButton(
+                        text="Login",
+                        width=280,
+                        height=45,
+                        bgcolor="#5C6BC0",
+                        color=ft.Colors.WHITE,
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                        on_click=self._handle_login,
+                    ),
+                    
+                    ft.Container(height=15),
+                    
+                    # Quick Login section
+                    ft.Text(
+                        "Quick Login (Demo)",
+                        size=12,
+                        color=ft.Colors.GREY_600,
+                    ),
+                    
+                    ft.Container(height=10),
+                    
+                    # Role buttons - Row 1
+                    ft.Row(
+                        [
+                            self._create_role_button("Voter", ft.Icons.PERSON, "#E3F2FD", "#1976D2"),
+                            self._create_role_button("Politician", ft.Icons.STAR, "#F3E5F5", "#7B1FA2"),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                    
+                    ft.Container(height=8),
+                    
+                    # Role buttons - Row 2
+                    ft.Row(
+                        [
+                            self._create_role_button("NBI Officer", ft.Icons.SECURITY, "#FFEBEE", "#D32F2F"),
+                            self._create_role_button("COMELEC", ft.Icons.ACCOUNT_BALANCE, "#E8F5E9", "#388E3C"),
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=10,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=5,
+            ),
+            width=380,
+            padding=40,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=15,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=15,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                offset=ft.Offset(0, 5),
+            ),
+        )
+    
+    def _create_role_button(self, role, icon, bg_color, text_color):
+        """Create a role-based quick login button"""
+        return ft.OutlinedButton(
+            content=ft.Row(
+                [
+                    ft.Icon(icon, size=16, color=text_color),
+                    ft.Text(role, size=12, color=text_color),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=5,
+            ),
+            width=130,
+            height=38,
+            style=ft.ButtonStyle(
+                bgcolor=bg_color,
+                shape=ft.RoundedRectangleBorder(radius=8),
+                side=ft.BorderSide(1, bg_color),
+            ),
+            on_click=lambda e, r=role: self._handle_role_login(r),
+        )
     
     def _handle_login(self, e):
         """Handle login button click"""
-        email = self.email_field.value.strip()
-        password = self.password_field.value.strip()
+        username = self.username_field.value.strip() if self.username_field.value else ""
+        password = self.password_field.value.strip() if self.password_field.value else ""
         
-        if not email or not password:
+        if not username or not password:
             self.error_text.value = "Please fill all fields"
             self.update()
             return
         
-        self.on_login(email, password)
+        self.on_login_callback(username, password)
+    
+    def _handle_role_login(self, role):
+        """Handle quick role-based login"""
+        # Map roles to demo credentials
+        role_credentials = {
+            "Voter": ("voter1", "voter123"),
+            "Politician": ("politician1", "pol123"),
+            "NBI Officer": ("nbi1", "nbi123"),
+            "COMELEC": ("comelec1", "com123"),
+        }
+        
+        if role in role_credentials:
+            username, password = role_credentials[role]
+            self.on_login_callback(username, password)
+
