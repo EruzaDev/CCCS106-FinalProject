@@ -12,6 +12,11 @@ from pages.settings_page import SettingsPage
 from pages.profile_page import ProfilePage
 from pages.comelec_dashboard import ComelecDashboard
 from pages.user_management import UserManagement
+from pages.election_results import ElectionResults
+from pages.voter_dashboard import VoterDashboard
+from pages.politician_profile import PoliticianProfile
+from pages.candidate_comparison import CandidateComparison
+from pages.voting_page import VotingPage
 from models.database import init_demo_data
 from models.session_manager import SessionManager
 
@@ -77,22 +82,79 @@ class HonestBallotApp:
         self.page.update()
     
     def show_home_page(self):
-        """Show the main home page"""
+        """Show the main home page - now voter dashboard"""
         self.page.clean()
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
             return
         
-        home_page = HomePage(
-            username=self.current_session["username"],
-            user_handle=f"@{self.current_session['username'].lower()}",
+        # Check if voting is active
+        voting_status = self.db.get_voting_status() if self.db else {"is_active": False}
+        
+        if voting_status.get("is_active", False):
+            # Show voting page when voting is active
+            voting_page = VotingPage(
+                user_id=self.current_session["user_id"],
+                username=self.current_session["username"],
+                db=self.db,
+                on_logout=self.handle_logout,
+                on_view_profile=self.show_politician_profile,
+            )
+            self.page.add(voting_page)
+        else:
+            # Show voter dashboard when not voting time
+            dashboard = VoterDashboard(
+                username=self.current_session["username"],
+                db=self.db,
+                on_logout=self.handle_logout,
+                on_profile_view=self.show_politician_profile,
+                on_compare=self.show_candidate_comparison,
+            )
+            self.page.add(dashboard)
+        
+        self.page.update()
+    
+    def show_politician_profile(self, politician_id):
+        """Show politician profile page"""
+        self.page.clean()
+        self.page.overlay.clear()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        profile_page = PoliticianProfile(
+            politician_id=politician_id,
+            db=self.db,
+            on_back=self.show_home_page,
             on_logout=self.handle_logout,
-            on_settings=self.handle_settings,
-            on_profile=self.show_profile_page,
+            username=self.current_session["username"],
         )
         
-        self.page.add(home_page)
+        self.page.add(profile_page)
+        self.page.update()
+    
+    def show_candidate_comparison(self, candidate1_id, candidate2_id):
+        """Show candidate comparison page"""
+        self.page.clean()
+        self.page.overlay.clear()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        comparison_page = CandidateComparison(
+            candidate1_id=candidate1_id,
+            candidate2_id=candidate2_id,
+            db=self.db,
+            on_back=self.show_home_page,
+            on_logout=self.handle_logout,
+            username=self.current_session["username"],
+        )
+        
+        self.page.add(comparison_page)
         self.page.update()
     
     def show_comelec_dashboard(self):
@@ -108,11 +170,30 @@ class HonestBallotApp:
             db=self.db,
             on_logout=self.handle_logout,
             on_user_management=self.show_user_management,
-            on_election_results=lambda: self.show_error_dialog("Info", "Election Results - Coming Soon"),
+            on_election_results=self.show_election_results,
             on_candidates=lambda: self.show_error_dialog("Info", "Verified Candidates - Coming Soon"),
+            current_user_id=self.current_session["user_id"],
         )
         
         self.page.add(dashboard)
+        self.page.update()
+    
+    def show_election_results(self):
+        """Show the Election Results page"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        results_page = ElectionResults(
+            username=self.current_session["username"],
+            db=self.db,
+            on_logout=self.handle_logout,
+            on_back=self.show_comelec_dashboard,
+        )
+        
+        self.page.add(results_page)
         self.page.update()
     
     def show_user_management(self):

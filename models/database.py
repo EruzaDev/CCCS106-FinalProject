@@ -92,6 +92,35 @@ class Database:
             )
         ''')
         
+        # Create achievement verifications table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS achievement_verifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                politician_id INTEGER NOT NULL,
+                achievement_title TEXT NOT NULL,
+                achievement_description TEXT,
+                evidence_url TEXT,
+                status TEXT DEFAULT 'pending',
+                verified_by INTEGER,
+                verified_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (politician_id) REFERENCES users(id),
+                FOREIGN KEY (verified_by) REFERENCES users(id)
+            )
+        ''')
+        
+        # Create voting status table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS voting_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                is_active BOOLEAN DEFAULT 0,
+                started_at TIMESTAMP,
+                ended_at TIMESTAMP,
+                updated_by INTEGER,
+                FOREIGN KEY (updated_by) REFERENCES users(id)
+            )
+        ''')
+        
         self.connection.commit()
     
     def hash_password(self, password):
@@ -356,6 +385,126 @@ class Database:
         self.connection.commit()
         return self.cursor.fetchall()
     
+    # Achievement Verification Methods
+    def create_achievement_verification(self, politician_id, title, description, evidence_url=None):
+        """Create a new achievement verification request"""
+        try:
+            self.cursor.execute('''
+                INSERT INTO achievement_verifications (politician_id, achievement_title, achievement_description, evidence_url)
+                VALUES (?, ?, ?, ?)
+            ''', (politician_id, title, description, evidence_url))
+            self.connection.commit()
+            return self.cursor.lastrowid
+        except sqlite3.IntegrityError:
+            return None
+    
+    def get_pending_verifications(self):
+        """Get all pending achievement verifications"""
+        self.cursor.execute('''
+            SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
+                   av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
+            FROM achievement_verifications av
+            JOIN users u ON av.politician_id = u.id
+            WHERE av.status = 'pending'
+            ORDER BY av.created_at DESC
+        ''')
+        return self.cursor.fetchall()
+    
+    def get_all_verifications(self):
+        """Get all achievement verifications"""
+        self.cursor.execute('''
+            SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
+                   av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
+            FROM achievement_verifications av
+            JOIN users u ON av.politician_id = u.id
+            ORDER BY av.created_at DESC
+        ''')
+        return self.cursor.fetchall()
+    
+    def verify_achievement(self, verification_id, verified_by_id, status='verified'):
+        """Verify or reject an achievement"""
+        self.cursor.execute('''
+            UPDATE achievement_verifications 
+            SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (status, verified_by_id, verification_id))
+        self.connection.commit()
+    
+    def get_verifications_by_politician(self, politician_id):
+        """Get all verifications for a specific politician"""
+        self.cursor.execute('''
+            SELECT id, achievement_title, achievement_description, evidence_url, status, created_at
+            FROM achievement_verifications
+            WHERE politician_id = ?
+            ORDER BY created_at DESC
+        ''', (politician_id,))
+        return self.cursor.fetchall()
+    
+    # Voting Status Methods
+    def get_voting_status(self):
+        """Get current voting status"""
+        self.cursor.execute('SELECT is_active, started_at, ended_at FROM voting_status ORDER BY id DESC LIMIT 1')
+        result = self.cursor.fetchone()
+        if result:
+            return {"is_active": bool(result[0]), "started_at": result[1], "ended_at": result[2]}
+        return {"is_active": False, "started_at": None, "ended_at": None}
+    
+    def start_voting(self, user_id):
+        """Start voting session"""
+        self.cursor.execute('''
+            INSERT INTO voting_status (is_active, started_at, updated_by)
+            VALUES (1, CURRENT_TIMESTAMP, ?)
+        ''', (user_id,))
+        self.connection.commit()
+        return True
+    
+    def stop_voting(self, user_id):
+        """Stop voting session"""
+        self.cursor.execute('''
+            UPDATE voting_status SET is_active = 0, ended_at = CURRENT_TIMESTAMP, updated_by = ?
+            WHERE id = (SELECT MAX(id) FROM voting_status)
+        ''', (user_id,))
+        self.connection.commit()
+        return True
+    
+    # Election Results Methods
+    def get_election_results(self):
+        """Get election results grouped by position"""
+        self.cursor.execute('''
+            SELECT u.id, u.full_name, u.username, u.position, u.party, u.profile_image,
+                   COUNT(v.id) as vote_count
+            FROM users u
+            LEFT JOIN votes v ON u.id = v.candidate_id
+            WHERE u.role = 'politician'
+            GROUP BY u.id
+            ORDER BY u.position, vote_count DESC
+        ''')
+        return self.cursor.fetchall()
+    
+    def get_total_votes_cast(self):
+        """Get total number of votes cast"""
+        self.cursor.execute('SELECT COUNT(*) FROM votes')
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+    
+    def get_unique_voters_count(self):
+        """Get count of unique voters who have voted"""
+        self.cursor.execute('SELECT COUNT(DISTINCT voter_id) FROM votes')
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+    
+    def get_positions_count(self):
+        """Get count of unique positions being voted on"""
+        self.cursor.execute('SELECT COUNT(DISTINCT position) FROM users WHERE role = "politician"')
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+    
+    def get_votes_by_candidate(self, candidate_id):
+        """Get vote count for a specific candidate"""
+        self.cursor.execute('SELECT COUNT(*) FROM votes WHERE candidate_id = ?', (candidate_id,))
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+    
     def verify_user_by_username(self, username, password):
         """Verify user credentials by username"""
         password_hash = self.hash_password(password)
@@ -401,8 +550,6 @@ def init_demo_data():
         ("voter1", "voter1@honestballot.local", "voter123", "voter"),
         ("voter2", "voter2@honestballot.local", "voter123", "voter"),
         ("voter3", "voter3@honestballot.local", "voter123", "voter"),
-        # Politician account
-        ("politician1", "politician1@honestballot.local", "pol123", "politician"),
         # NBI Officer account
         ("nbi1", "nbi1@honestballot.local", "nbi123", "nbi"),
         # COMELEC account
@@ -412,7 +559,23 @@ def init_demo_data():
     for username, email, password, role in demo_users:
         db.create_user(username, email, password, role)
     
-    # Create sample candidates
+    # Create sample politician accounts with positions
+    politicians_data = [
+        # Governor candidates
+        ("Roberto Cruz", "rcruz@honestballot.local", "pol123", "Roberto Cruz", "Governor", "United Citizens Party", "Experienced administrator with 15 years in public service"),
+        ("Carmen dela Cruz", "cdelacruz@honestballot.local", "pol123", "Carmen dela Cruz", "Governor", "Progressive Alliance", "Former city mayor with focus on infrastructure"),
+        # Mayor candidates
+        ("Elena Rodriguez", "erodriguez@honestballot.local", "pol123", "Elena Rodriguez", "Mayor", "Green Coalition", "Environmental advocate and community leader"),
+        ("Antonio Mendoza", "amendoza@honestballot.local", "pol123", "Antonio Mendoza", "Mayor", "Independent", "Business leader focused on economic growth"),
+        # Senator candidates
+        ("Maria Santos", "msantos@honestballot.local", "pol123", "Maria Santos", "Senator", "Progressive Alliance", "Education reform champion"),
+        ("Miguel Reyes", "mreyes@honestballot.local", "pol123", "Miguel Reyes", "Senator", "Democratic Reform Party", "Healthcare advocate"),
+    ]
+    
+    for username, email, password, full_name, position, party, bio in politicians_data:
+        db.create_politician(username, email, password, full_name, position, party, bio)
+    
+    # Create sample candidates (legacy table)
     candidates = [
         ("Juan Dela Cruz", "President", "Party A", "Experienced leader with 20 years in politics"),
         ("Maria Santos", "President", "Party B", "Business executive focused on economy"),
@@ -427,5 +590,28 @@ def init_demo_data():
     
     # Create an election session
     db.create_election_session("2025 General Election")
+    
+    # Create sample achievement verifications for politicians
+    politicians = db.get_users_by_role("politician")
+    if politicians:
+        # Add achievement verifications for first few politicians
+        for i, politician in enumerate(politicians[:3]):
+            politician_id = politician[0]
+            full_name = politician[5] if politician[5] else politician[1]
+            
+            db.create_achievement_verification(
+                politician_id,
+                "Public Service Achievement",
+                f"Successfully led community development projects benefiting local constituents.",
+                None
+            )
+            
+            if i == 0:
+                db.create_achievement_verification(
+                    politician_id,
+                    "Educational Reform Initiative",
+                    "Implemented scholarship programs for underprivileged students.",
+                    None
+                )
     
     return db  # Return the open database connection

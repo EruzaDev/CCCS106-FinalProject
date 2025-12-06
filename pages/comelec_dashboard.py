@@ -4,7 +4,7 @@ import flet as ft
 class ComelecDashboard(ft.Column):
     """COMELEC Dashboard - Main dashboard for COMELEC administrators"""
     
-    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates):
+    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates, current_user_id=None):
         super().__init__()
         self.username = username
         self.db = db
@@ -12,7 +12,11 @@ class ComelecDashboard(ft.Column):
         self.on_user_management = on_user_management
         self.on_election_results = on_election_results
         self.on_candidates = on_candidates
-        self.voting_active = False
+        self.current_user_id = current_user_id
+        
+        # Get voting status from database
+        status = self.db.get_voting_status() if self.db else {"is_active": False}
+        self.voting_active = status["is_active"]
         
         # Build UI
         self._build_ui()
@@ -401,29 +405,38 @@ class ComelecDashboard(ft.Column):
     
     def _build_pending_verifications(self):
         """Build pending achievement verifications section"""
-        # Get politicians with achievements to verify
-        politicians = self.db.get_users_by_role("politician") if self.db else []
+        # Get pending verifications from database
+        pending_verifications = self.db.get_pending_verifications() if self.db else []
         
         verification_items = []
-        for politician in politicians[:2]:  # Show first 2 for demo
-            user_id, username, email, role, created_at, full_name, status, position, party, biography, profile_image = politician
+        for verification in pending_verifications:
+            ver_id, politician_id, title, description, evidence_url, status, created_at, full_name, username, position = verification
             display_name = full_name if full_name else username
             display_position = position if position else "Politician"
             
             verification_items.append(
                 self._build_verification_item(
+                    ver_id,
                     display_name,
                     display_position,
-                    "Public Service Achievement",
-                    "Pending verification of claimed accomplishments and public service record.",
+                    title,
+                    description if description else "Pending verification of claimed accomplishments.",
                 )
             )
         
         if not verification_items:
             verification_items.append(
                 ft.Container(
-                    content=ft.Text("No pending verifications", color="#666666"),
-                    padding=20,
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.Icons.VERIFIED, color="#CCCCCC", size=48),
+                            ft.Text("No pending verifications", color="#666666", size=14),
+                            ft.Text("All achievements have been reviewed.", color="#999999", size=12),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=8,
+                    ),
+                    padding=40,
                     alignment=ft.alignment.center,
                 )
             )
@@ -450,7 +463,7 @@ class ComelecDashboard(ft.Column):
             ),
         )
     
-    def _build_verification_item(self, name, position, achievement_title, description):
+    def _build_verification_item(self, verification_id, name, position, achievement_title, description):
         """Build a verification item card"""
         return ft.Container(
             content=ft.Row(
@@ -475,14 +488,29 @@ class ComelecDashboard(ft.Column):
                         spacing=4,
                         expand=True,
                     ),
-                    ft.ElevatedButton(
-                        "Verify",
-                        icon=ft.Icons.CHECK,
-                        bgcolor="#4CAF50",
-                        color=ft.Colors.WHITE,
-                        style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                        ),
+                    ft.Row(
+                        [
+                            ft.ElevatedButton(
+                                "Verify",
+                                icon=ft.Icons.CHECK,
+                                bgcolor="#4CAF50",
+                                color=ft.Colors.WHITE,
+                                style=ft.ButtonStyle(
+                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                ),
+                                on_click=lambda e, vid=verification_id: self._verify_achievement(vid, "verified"),
+                            ),
+                            ft.OutlinedButton(
+                                "Reject",
+                                icon=ft.Icons.CLOSE,
+                                style=ft.ButtonStyle(
+                                    color="#F44336",
+                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                ),
+                                on_click=lambda e, vid=verification_id: self._verify_achievement(vid, "rejected"),
+                            ),
+                        ],
+                        spacing=8,
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -493,8 +521,23 @@ class ComelecDashboard(ft.Column):
             margin=ft.margin.only(bottom=12),
         )
     
+    def _verify_achievement(self, verification_id, status):
+        """Verify or reject an achievement"""
+        if self.db:
+            self.db.verify_achievement(verification_id, self.current_user_id, status)
+            # Rebuild UI to reflect changes
+            self._build_ui()
+            if self.page:
+                self.page.update()
+    
     def _toggle_voting(self):
         """Toggle voting status"""
+        if self.db:
+            if self.voting_active:
+                self.db.stop_voting(self.current_user_id)
+            else:
+                self.db.start_voting(self.current_user_id)
+        
         self.voting_active = not self.voting_active
         self._build_ui()
         if self.page:
