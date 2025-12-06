@@ -1,271 +1,108 @@
-# HonestBallot - Social Media Platform with Fact-Checking
+# HonestBallot - Voting Application
 
-A cross-platform social media application built with Python Flet framework, featuring AI-powered fact-checking for Filipino news, user posts with engagement features, and comprehensive admin moderation capabilities.
+A cross-platform voting application built with Python Flet framework, designed to provide transparent and secure voting mechanisms with comprehensive election management capabilities.
 
 ## 🎯 Project Overview
 
-HonestBallot is a social network platform focused on promoting truth and transparency in social media. The system includes fact-checking capabilities that verify posts against Filipino news sources, helping combat misinformation while fostering meaningful social connections.
+HonestBallot is a voting platform that demonstrates how technology can support electoral transparency. The system supports multiple user roles with specialized dashboards for different voting participants.
 
-### Key Features
+### User Roles
 
-- **User Posts** - Create posts with text and images
-- **Social Network** - Follow users, view their posts
-- **Fact-Checking** - AI-powered verification against Filipino news websites (Rappler, Inquirer, PhilStar, GMA News)
-- **Admin Panel** - Comprehensive moderation dashboard for reported content
-- **Cross-Platform** - Responsive design for mobile portrait and landscape desktop views
+1. **Voters** - Cast votes, view election results
+2. **Candidates** - Manage profiles and campaign information
+3. **Election Officials** - Manage voting process, view real-time results
+4. **Administrators** - System oversight and configuration
 
-## 🚀 Current Implementation Status
+## 🚀 Features
 
-### ✅ Completed (Milestone 4 - Core UI Features)
-- Post creation with expandable input
-- Image upload with preview
-- Post cards with like/report interactions
-- Profile page with editable sections
-- Dark/light mode theming
-- Responsive collapsible sidebar
-- Settings page with account management
-- Notification system
-- User search functionality
+### Core Features
+- ✅ User authentication and role-based access control
+- ✅ Secure voting mechanism with integrity checks
+- ✅ Real-time vote counting and results display
+- ✅ Candidate profile management
+- ✅ Responsive cross-platform design
 
-### 🔄 In Progress
-- Data models preparation (User, Post, PostReport)
-- Database integration planning
+### Voting System
+- ✅ Position-based voting interface
+- ✅ One vote per position enforcement
+- ✅ Vote submission with confirmation
+- ✅ Real-time vote tallying
+- ✅ Results dashboard with analytics
 
-### 📋 Planned Features
-- Firebase Authentication (Email/Password, Google, Apple)
-- Firestore database integration
-- Firebase Storage for images
-- AI fact-checking system
-- Admin panel with RBAC
-- 2FA via email
-- Following/followers system
+### Administrative Features
+- ✅ Election session management
+- ✅ Voter registration
+- ✅ Results verification
+- ✅ Audit trails and logging
 
 ## 🛠️ Technology Stack
 
 ### Current Implementation
-- **Framework:** Python Flet (Flutter-based UI)
+- **Framework:** Python Flet (Flutter-based)
 - **Language:** Python 3.11+
+- **Database:** SQLite (Local)
 - **Architecture:** Component-based with MVC pattern
+- **Session Management:** Unique user sessions with token-based authentication
+
+### Key Features
+- **Local-Only:** Runs completely offline with SQLite database
+- **Multi-User Sessions:** Up to 5 simultaneous users with unique sessions
+- **Pre-Configured Users:** 5 demo users ready to use
+- **Session Tokens:** Each user gets a unique session token
 
 ### Planned Production Stack
-- **Backend:** Firebase (Firestore, Auth, Storage)
-- **Admin Backend:** Flask + SQLite (RBAC, 2FA)
-- **Fact-Checking:** Hybrid NLP + RSS feeds
-- **News Sources:** Rappler, Inquirer, PhilStar, GMA News
-- **Image Processing:** Pillow for compression
+- **Backend:** Firebase or Node.js + Express
+- **Database:** Firestore or PostgreSQL
+- **Authentication:** Firebase Auth or JWT
+- **Hosting:** Docker, Heroku, or AWS
+
 
 ## 📁 Project Structure
 
 ```
 CCCS106-FinalProject/
-├── main.py                      # Application entry point
-├── requirements.txt             # Python dependencies
-├── assets/                      # Images and static files
-├── components/                  # Reusable UI components
+├── main.py                    # Application entry point
+├── setup_db.py                # Database initialization script
+├── requirements.txt           # Python dependencies
+├── voting_app.db              # Local SQLite database (auto-created)
+├── pages/                     # Main application pages
 │   ├── __init__.py
-│   ├── sidebar.py              # Navigation sidebar
-│   ├── top_taskbar.py          # Header with search/notifications
-│   ├── post_creator.py         # Post input interface
-│   ├── post_card.py            # Individual post display
-│   ├── post_container.py       # Posts feed container
-│   ├── right_sidebar.py        # Suggestions sidebar
-│   └── notification_dropdown.py # Notifications panel
-├── pages/                       # Main application pages
-│   ├── __init__.py
-│   ├── login_page.py           # User login
-│   ├── signup_page.py          # User registration
-│   ├── home_page.py            # Main feed
-│   ├── profile_page.py         # User profile
-│   └── settings_page.py        # User settings
-└── models/                      # Data models (NEW)
+│   ├── login_page.py         # User login
+│   ├── signup_page.py        # User registration
+│   ├── home_page.py          # Main dashboard
+│   ├── profile_page.py       # User profile
+│   └── settings_page.py      # User settings
+└── models/                    # Data models and database
     ├── __init__.py
-    ├── user.py                 # User & UserProfile models
-    └── post.py                 # Post & PostReport models
+    ├── database.py           # SQLite database manager
+    └── session_manager.py    # User session management
 ```
 
-## 📋 SDLC Model: Iterative Development Approach
+## 📋 Development Roadmap
 
-This project follows an **Iterative and Incremental Development Model**, allowing for continuous refinement and feature expansion through defined milestones.
+### Phase 1: Foundation (Current)
+- [ ] Project setup and architecture
+- [ ] Authentication pages (login/signup)
+- [ ] User role management
+- [ ] Basic UI components
 
----
+### Phase 2: Core Features
+- [ ] Candidate management
+- [ ] Voting interface
+- [ ] Vote submission and validation
+- [ ] Real-time vote counting
 
-## Milestone 1: Project Planning & Setup
+### Phase 3: Results & Admin
+- [ ] Results dashboard
+- [ ] Election analytics
+- [ ] Admin panel
+- [ ] Audit trails
 
-### Objectives
-- Define system requirements for a social media platform with fact-checking
-- Establish project structure and development environment
-- Create initial wireframes and designs
-
-### Deliverables
-- ✅ Project charter and requirements document
-- ✅ Technology stack selection (Python Flet)
-- ✅ Git repository setup
-- ✅ Development roadmap (18 milestones)
-
----
-
-## Milestone 2: Authentication & User Management
-
-### Objectives
-- Implement user authentication system
-- Create login and signup pages
-- Set up user session management
-
-### Planned Features
-- Email/Password authentication via Firebase
-- Google Sign-In integration
-- Apple Sign-In integration
-- Session persistence
-- Logout functionality
-
-### Status
-🔄 **Partially Complete** - UI pages built, Firebase integration pending
-
----
-
-## Milestone 3: Database Design & Integration
-
-### Objectives
-- Design database schema for users, posts, and interactions
-- Integrate Firebase Firestore
-- Set up Firebase Storage for images
-
-### Data Models Created
-✅ **User Model** (`models/user.py`)
-- UserProfile: username, email, handle, bio, stats
-- User: authentication data, admin flags, account status
-
-✅ **Post Model** (`models/post.py`)
-- Post: content, images, likes, fact-check status
-- PostReport: moderation reports with reasons
-- FactCheckStatus: True, Somewhat True, False, Pending, Not Applicable
-
-### Status
-🔄 **In Progress** - Models defined, Firebase integration pending
-
----
-
-## Milestone 4: Core UI Features ✅ COMPLETED
-
-### Implemented Features
-✅ **Post Creation**
-- Expandable input interface
-- Text editor with character limit
-- Image upload with file picker
-- Image preview with remove option
-- Submit and cancel buttons
-
-✅ **Post Display**
-- Post cards with user info
-- Like button with count
-- Report menu for moderation
-- Image display support
-- Timestamp formatting
-
-✅ **Profile Page**
-- Editable "About Me" section
-- Editable location & contact info
-- Profile stats (Following, Followers, Likes)
-- User posts feed
-
-✅ **Settings Page**
-- Dark/Light mode toggle with live switching
-- Delete account option with confirmation
-- Simplified UI (removed unnecessary features)
-
-✅ **Responsive Design**
-- Collapsible sidebar for mobile/tablet
-- Icon-only sidebar mode
-- Responsive breakpoints (768px mobile, 1024px tablet)
-
-✅ **Theme System**
-- Light and dark mode support
-- Theme-aware component backgrounds
-- Persistent theme preference
-
----
-
-## Milestone 5: Social Features (Next)
-
-### Planned Features
-- Following/Followers system
-- User search and discovery
-- Friend suggestions
-- User profiles with posts
-- Activity feed
-
----
-
-## Milestone 6: Fact-Checking System
-
-### Planned Architecture
-**Hybrid NLP + RSS Approach**
-
-1. **Content Analysis**
-   - Extract claims from posts
-   - Identify news-worthy content
-   - Filter personal opinions
-
-2. **News Source Integration**
-   - Rappler RSS feeds
-   - Philippine Daily Inquirer
-   - PhilStar
-   - GMA News
-   - Real-time article scraping
-
-3. **Verification Levels**
-   - ✅ **True** - Verified accurate
-   - ⚠️ **Somewhat True** - Partially accurate
-   - ❌ **False** - Contains misinformation
-   - ⏳ **Pending** - Under review
-   - ➖ **Not Applicable** - Personal content
-
-4. **Display Integration**
-   - Fact-check badges on posts
-   - Source links for verification
-   - Summary of findings
-
----
-
-## Milestone 7-10: Admin Panel & Moderation
-
-### Features
-- Report management dashboard
-- User moderation tools
-- Content flagging system
-- Analytics and insights
-- RBAC (Role-Based Access Control)
-- 2FA for admin users
-
----
-
-## Milestone 11-15: Advanced Features
-
-### Planned Enhancements
-- Real-time notifications
-- Image compression and optimization
-- Search functionality
-- Post sharing
-- Comment system
-- Direct messaging
-
----
-
-## Milestone 16-18: Testing & Deployment
-
-### Testing Strategy
-- Unit tests for components
-- Integration tests for Firebase
-- User acceptance testing
-- Performance optimization
-- Security audit
-
-### Deployment
-- Web deployment via Flet
-- Desktop builds (Windows, macOS, Linux)
-- Mobile builds (Android, iOS)
-
----
+### Phase 4: Polish & Deployment
+- [ ] Testing and optimization
+- [ ] Security hardening
+- [ ] Performance tuning
+- [ ] Production deployment
 
 ## 📦 Installation & Setup
 
@@ -280,17 +117,7 @@ This project follows an **Iterative and Incremental Development Model**, allowin
 git clone https://github.com/EruzaDev/CCCS106-FinalProject.git
 cd CCCS106-FinalProject
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the application
-python main.py
-```
-
-### Development Setup
-
-```bash
-# Create virtual environment (optional but recommended)
+# Create virtual environment
 python -m venv venv
 
 # Activate virtual environment
@@ -302,279 +129,334 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run in development mode
+# Initialize database with demo data
+python setup_db.py
+
+# Run the application
 python main.py
+```
+
+### Demo User Credentials
+
+The application comes with 5 pre-configured users. Each can be logged in separately to create unique sessions:
+
+```
+Email: alice@honestballot.local
+Password: password123
+
+Email: bob@honestballot.local
+Password: password123
+
+Email: charlie@honestballot.local
+Password: password123
+
+Email: diana@honestballot.local
+Password: password123
+
+Email: eve@honestballot.local
+Password: password123
 ```
 
 ### Dependencies
 
 ```txt
 flet>=0.21.0
-Pillow>=10.0.0
 ```
-
-### Test Credentials (Firebase integration pending)
-- **Email:** test@example.com
-- **Password:** password123
-
----
 
 ## 🎨 Application Structure
 
-### Components Overview
+### Local Database System
 
-#### `components/sidebar.py`
-- Navigation sidebar with Profile, Find Friends, Settings, Log Out
-- Collapsible design for mobile/tablet views
-- Icon-only mode for compact display
+The application uses SQLite for local data storage with the following tables:
 
-#### `components/top_taskbar.py`
-- Search bar for finding users
-- User info display
-- Settings button
-- Notifications dropdown
-- Clickable logo to return home
+#### Users Table
+- Stores user credentials and roles
+- Password hashing with SHA-256
+- Role-based access control
 
-#### `components/post_creator.py`
-- Expandable post input
-- Text field with placeholder
-- Image upload functionality
-- Submit and cancel buttons
+#### User Sessions Table
+- Tracks active user sessions
+- Each session has a unique token
+- Session timeout after 8 hours of inactivity
+- Supports multiple simultaneous sessions
 
-#### `components/post_card.py`
-- User avatar and info
-- Post content display
-- Image preview
-- Like button with count
-- Report menu for moderation
+#### Votes Table
+- Records all cast votes
+- Ensures one vote per user per position
+- Timestamps for audit trails
 
-#### `components/notification_dropdown.py`
-- List of post notifications
-- "See previous" button
-- Clean, minimal design
+#### Candidates Table
+- Stores candidate information
+- Positions and party affiliation
 
-### Pages Overview
+#### Election Sessions Table
+- Manages voting sessions
+- Start/end times and active status
+
+### Session Management
+
+Each user login creates a unique session:
+
+```python
+# Session structure
+{
+    "token": "unique-uuid-token",
+    "user_id": 1,
+    "username": "alice_smith",
+    "email": "alice@honestballot.local",
+    "role": "voter",
+    "created_at": "2025-12-07T10:30:00",
+    "last_activity": "2025-12-07T10:35:00"
+}
+```
+
+### Core Components
 
 #### `pages/login_page.py`
-- Email/password input
-- Social sign-in buttons (Google, Apple)
-- "Create Account" link
+- User authentication with email/password
+- Form validation
+- Demo credentials reference
 
 #### `pages/signup_page.py`
-- Account registration form
-- Social sign-up options
-- Terms acceptance
+- New user registration
+- Password confirmation
+- Validation checks
 
 #### `pages/home_page.py`
-- Main feed with posts
-- Post creator at top
-- Left sidebar navigation
-- Right sidebar with suggestions
+- Main dashboard
+- Navigation to features
+- User welcome screen
 
 #### `pages/profile_page.py`
-- User profile header with cover photo
-- Editable "About Me" section
-- Editable location & info
-- User's posts feed
+- User information display
+- Account details
 
 #### `pages/settings_page.py`
-- Dark/Light mode toggle
-- Delete account option
-- Simplified settings UI
+- User preferences
+- Theme and notification settings
 
-### Data Models
+## 🚀 Running the Application
 
-#### `models/user.py`
-```python
-@dataclass
-class UserProfile:
-    username: str
-    email: str
-    handle: str
-    about_me: str
-    profile_picture_url: Optional[str]
-    location: str
-    following_count: int
-    followers_count: int
-    likes_count: int
-    theme: str  # "light" or "dark"
-```
-
-#### `models/post.py`
-```python
-@dataclass
-class Post:
-    post_id: str
-    author_uid: str
-    content: str
-    image_url: Optional[str]
-    likes_count: int
-    fact_check_status: FactCheckStatus
-    created_at: datetime
-
-class FactCheckStatus(Enum):
-    TRUE = "true"
-    SOMEWHAT_TRUE = "somewhat_true"
-    FALSE = "false"
-    PENDING = "pending"
-    NOT_APPLICABLE = "not_applicable"
-```
-
----
-
-## 🚀 Deployment Options
-
-### Web Deployment
+### Development Mode (Single Instance)
 ```bash
-# Build for web
+python main.py
+```
+
+The Flet application will open in your default web browser or as a desktop app.
+
+### Running Multiple User Sessions
+
+Since the app runs locally with SQLite, you can create multiple instances to simulate multiple users:
+
+#### Method 1: Multiple Browser Tabs (Web Mode)
+```bash
+# First instance
+python main.py
+
+# In your terminal, Flet will display a URL like:
+# http://localhost:8550
+
+# Open the same URL in multiple browser tabs to simulate different sessions
+# Each tab will be a separate session
+```
+
+#### Method 2: Multiple Desktop Instances (Desktop Mode)
+```bash
+# Terminal 1
+python main.py
+
+# Terminal 2
+python main.py
+
+# Terminal 3
+python main.py
+
+# Each instance runs independently with its own session
+```
+
+#### Method 3: Multiple Machines on Same Network
+Since the database is local to each machine, each computer can run the app independently:
+
+```bash
+# Machine 1
+python main.py
+
+# Machine 2
+python main.py
+
+# Machine 3
+python main.py
+```
+
+### Testing Multiple Concurrent Users
+
+Example workflow with 5 users:
+
+1. **Open Terminal 1:**
+   ```bash
+   python main.py
+   # Login as: alice@honestballot.local / password123
+   ```
+
+2. **Open Terminal 2 (in new PowerShell window):**
+   ```bash
+   cd C:\Users\Cjay Lavapie\Downloads\CCCS106-FinalProject
+   python main.py
+   # Login as: bob@honestballot.local / password123
+   ```
+
+3. **Open Terminal 3:**
+   ```bash
+   cd C:\Users\Cjay Lavapie\Downloads\CCCS106-FinalProject
+   python main.py
+   # Login as: charlie@honestballot.local / password123
+   ```
+
+4. **Repeat for diana@honestballot.local and eve@honestballot.local**
+
+Each session maintains its own state with a unique token, and all votes are recorded in the shared local database.
+
+### Build for Distribution
+```bash
+# Web
 flet build web
 
-# The output will be in build/web directory
-# Deploy to any static hosting service
-```
-
-### Desktop Applications
-```bash
-# Windows
+# Desktop (Windows)
 flet build windows
 
-# macOS
+# Desktop (macOS)
 flet build macos
 
-# Linux
+# Desktop (Linux)
 flet build linux
-```
 
-### Mobile Applications
-```bash
-# Android APK
+# Mobile (Android)
 flet build apk
 
-# iOS (requires macOS with Xcode)
+# Mobile (iOS)
 flet build ipa
 ```
 
-### Hosting Recommendations
-- **Web:** GitHub Pages, Netlify, Vercel
-- **Desktop:** Direct distribution or Microsoft Store / Mac App Store
-- **Mobile:** Google Play Store, Apple App Store
+## 💾 Database Management
 
----
+### Initialize Database
+```bash
+python setup_db.py
+```
+
+This creates the SQLite database with:
+- 5 demo users
+- Sample candidates
+- Election session
+
+### Database Location
+```
+voting_app.db (in project root)
+```
+
+### Reset Database
+```bash
+# Delete the database file to reset
+rm voting_app.db
+# or
+del voting_app.db  # Windows
+
+# Then reinitialize
+python setup_db.py
+```
+
+### Database Schema
+
+```sql
+-- Users table
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT DEFAULT 'voter',
+    created_at TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+-- User Sessions table
+CREATE TABLE user_sessions (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
+    login_time TIMESTAMP,
+    last_activity TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Votes table
+CREATE TABLE votes (
+    id INTEGER PRIMARY KEY,
+    voter_id INTEGER NOT NULL,
+    candidate_id INTEGER NOT NULL,
+    position TEXT NOT NULL,
+    election_session_id INTEGER,
+    timestamp TIMESTAMP,
+    UNIQUE(voter_id, position, election_session_id),
+    FOREIGN KEY (voter_id) REFERENCES users(id)
+);
+
+-- Candidates table
+CREATE TABLE candidates (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    position TEXT NOT NULL,
+    party TEXT,
+    bio TEXT,
+    created_at TIMESTAMP
+);
+
+-- Election Sessions table
+CREATE TABLE election_sessions (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    is_active BOOLEAN DEFAULT 0,
+    created_at TIMESTAMP
+);
+```
 
 ## 🤝 Contributing
 
 ### Development Workflow
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+1. Create feature branch: `git checkout -b feature/YourFeature`
+2. Commit changes: `git commit -m 'Add YourFeature'`
+3. Push to branch: `git push origin feature/YourFeature`
+4. Open Pull Request
 
 ### Code Standards
 - Follow PEP 8 for Python code
 - Use type hints where applicable
-- Write descriptive docstrings
+- Write clear docstrings
 - Keep components modular and reusable
-- Test on both light and dark modes
-
-### Branch Strategy
-- `main` - Production-ready code
-- `milestone-X-...` - Feature branches for each milestone
-- Use descriptive branch names
-
----
-
-## 🐛 Known Issues
-
-1. Dark mode needs further refinement for some components
-2. Firebase integration not yet implemented
-3. Image compression needs optimization
-4. Fact-checking system pending implementation
-
----
-
-## 📝 Changelog
-
-### Milestone 4 (Current)
-- ✅ Implemented core UI components
-- ✅ Added dark/light mode theming
-- ✅ Created responsive sidebar
-- ✅ Built post creation and display
-- ✅ Added settings and profile pages
-- ✅ Implemented notification system
-
-### Milestone 3
-- ✅ Designed data models
-- ✅ Created User and Post structures
-- ✅ Defined fact-checking enums
-
-### Milestone 2
-- ✅ Built authentication UI pages
-- ✅ Created login and signup forms
-
-### Milestone 1
-- ✅ Project setup and planning
-- ✅ Technology selection
-- ✅ Repository initialization
-
----
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
+This project is licensed under the MIT License.
 
 ## 👥 Authors
 
 - **EruzaDev** - Project Lead & Development
 
----
-
 ## 🙏 Acknowledgments
 
 - Built with [Flet](https://flet.dev/) - A framework for building Flutter apps in Python
-- Inspired by the need for truth in social media
-- Filipino news sources for fact-checking integration
+- Inspired by the need for transparent voting systems
 - Open source community for tools and resources
-
----
 
 ## 📞 Support
 
-For questions or support:
+For questions or issues:
 - Create an issue on [GitHub Issues](https://github.com/EruzaDev/CCCS106-FinalProject/issues)
-- Email: support@eutable.example.com
+- Contact: support@honestballot.example.com
 
 ---
 
-## 🗺️ Roadmap
-
-### Version 1.0 (In Development)
-- [x] Core UI implementation
-- [x] Theme system
-- [x] Data models
-- [ ] Firebase integration
-- [ ] User authentication
-- [ ] Post creation/deletion
-- [ ] Like/unlike functionality
-
-### Version 2.0 (Planned)
-- [ ] Fact-checking system integration
-- [ ] Following/followers system
-- [ ] Real-time notifications
-- [ ] Comment system on posts
-- [ ] Direct messaging
-- [ ] User search and discovery
-
-### Version 3.0 (Future)
-- [ ] Admin panel with RBAC
-- [ ] Content moderation dashboard
-- [ ] Analytics and insights
-- [ ] Multi-language support (English, Filipino)
-- [ ] Advanced fact-checking with AI
-- [ ] API for third-party integrations
-
----
-
-**Built with 🐍 Python and ❤️ for truth in social media**
+**Built with 🐍 Python for transparent voting**
