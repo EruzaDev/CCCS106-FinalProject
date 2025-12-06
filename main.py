@@ -10,6 +10,8 @@ from pages.signup_page import SignupPage
 from pages.home_page import HomePage
 from pages.settings_page import SettingsPage
 from pages.profile_page import ProfilePage
+from pages.comelec_dashboard import ComelecDashboard
+from pages.user_management import UserManagement
 from models.database import init_demo_data
 from models.session_manager import SessionManager
 
@@ -93,6 +95,43 @@ class HonestBallotApp:
         self.page.add(home_page)
         self.page.update()
     
+    def show_comelec_dashboard(self):
+        """Show the COMELEC dashboard"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        dashboard = ComelecDashboard(
+            username=self.current_session["username"],
+            on_logout=self.handle_logout,
+            on_user_management=self.show_user_management,
+            on_election_results=lambda: self.show_error_dialog("Info", "Election Results - Coming Soon"),
+            on_candidates=lambda: self.show_error_dialog("Info", "Verified Candidates - Coming Soon"),
+        )
+        
+        self.page.add(dashboard)
+        self.page.update()
+    
+    def show_user_management(self):
+        """Show the User Management page"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        user_mgmt = UserManagement(
+            username=self.current_session["username"],
+            db=self.db,
+            on_logout=self.handle_logout,
+            on_back=self.show_comelec_dashboard,
+        )
+        
+        self.page.add(user_mgmt)
+        self.page.update()
+    
     def handle_login(self, username, password):
         """Handle login attempt"""
         if not username or not password:
@@ -125,7 +164,11 @@ class HonestBallotApp:
             # Store in page session
             self.page.session.set("current_session", self.current_session)
             
-            self.show_home_page()
+            # Route based on role
+            if user["role"] == "comelec":
+                self.show_comelec_dashboard()
+            else:
+                self.show_home_page()
         else:
             self.show_error_dialog("Login Failed", "Invalid email or password.")
     

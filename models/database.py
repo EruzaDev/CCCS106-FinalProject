@@ -28,7 +28,13 @@ class Database:
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
+                full_name TEXT,
                 role TEXT DEFAULT 'voter',
+                status TEXT DEFAULT 'active',
+                position TEXT,
+                party TEXT,
+                biography TEXT,
+                profile_image TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP
             )
@@ -243,8 +249,82 @@ class Database:
     def get_all_users(self):
         """Get all users (for admin purposes)"""
         self.cursor.execute('''
-            SELECT id, username, email, role, created_at FROM users
+            SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image FROM users
         ''')
+        return self.cursor.fetchall()
+    
+    def get_users_by_role(self, role):
+        """Get all users by role"""
+        self.cursor.execute('''
+            SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image 
+            FROM users WHERE role = ?
+        ''', (role,))
+        return self.cursor.fetchall()
+    
+    def create_voter(self, username, email, password, full_name):
+        """Create a new voter account"""
+        try:
+            password_hash = self.hash_password(password)
+            self.cursor.execute('''
+                INSERT INTO users (username, email, password_hash, full_name, role, status)
+                VALUES (?, ?, ?, ?, 'voter', 'active')
+            ''', (username, email, password_hash, full_name))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
+    def create_politician(self, username, email, password, full_name, position, party, biography, profile_image=None):
+        """Create a new politician account"""
+        try:
+            password_hash = self.hash_password(password)
+            self.cursor.execute('''
+                INSERT INTO users (username, email, password_hash, full_name, role, status, position, party, biography, profile_image)
+                VALUES (?, ?, ?, ?, 'politician', 'active', ?, ?, ?, ?)
+            ''', (username, email, password_hash, full_name, position, party, biography, profile_image))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
+    def update_user_status(self, user_id, status):
+        """Update user status (active/inactive)"""
+        self.cursor.execute('''
+            UPDATE users SET status = ? WHERE id = ?
+        ''', (status, user_id))
+        self.connection.commit()
+    
+    def update_voter(self, user_id, full_name, email, username):
+        """Update voter account"""
+        try:
+            self.cursor.execute('''
+                UPDATE users SET full_name = ?, email = ?, username = ? WHERE id = ?
+            ''', (full_name, email, username, user_id))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
+    def update_politician(self, user_id, full_name, email, username, position, party, biography, profile_image=None):
+        """Update politician account"""
+        try:
+            if profile_image:
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, profile_image = ? WHERE id = ?
+                ''', (full_name, email, username, position, party, biography, profile_image, user_id))
+            else:
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ? WHERE id = ?
+                ''', (full_name, email, username, position, party, biography, user_id))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
+    def delete_user(self, user_id):
+        """Delete a user"""
+        self.cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+        self.connection.commit()
         return self.cursor.fetchall()
     
     def verify_user_by_username(self, username, password):
