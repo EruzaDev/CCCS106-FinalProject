@@ -128,39 +128,6 @@ class LoginPage(ft.Container):
                         ),
                         on_click=self._handle_login,
                     ),
-                    
-                    ft.Container(height=15),
-                    
-                    # Quick Login section
-                    ft.Text(
-                        "Quick Login (Demo)",
-                        size=12,
-                        color=ft.Colors.GREY_600,
-                    ),
-                    
-                    ft.Container(height=10),
-                    
-                    # Role buttons - Row 1
-                    ft.Row(
-                        [
-                            self._create_role_button("Voter", ft.Icons.PERSON, "#E3F2FD", "#1976D2"),
-                            self._create_role_button("Politician", ft.Icons.STAR, "#F3E5F5", "#7B1FA2"),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=10,
-                    ),
-                    
-                    ft.Container(height=8),
-                    
-                    # Role buttons - Row 2
-                    ft.Row(
-                        [
-                            self._create_role_button("NBI Officer", ft.Icons.SECURITY, "#FFEBEE", "#D32F2F"),
-                            self._create_role_button("COMELEC", ft.Icons.ACCOUNT_BALANCE, "#E8F5E9", "#388E3C"),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=10,
-                    ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
@@ -177,27 +144,6 @@ class LoginPage(ft.Container):
             ),
         )
     
-    def _create_role_button(self, role, icon, bg_color, text_color):
-        """Create a role-based quick login button"""
-        return ft.OutlinedButton(
-            content=ft.Row(
-                [
-                    ft.Icon(icon, size=16, color=text_color),
-                    ft.Text(role, size=12, color=text_color),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=5,
-            ),
-            width=130,
-            height=38,
-            style=ft.ButtonStyle(
-                bgcolor=bg_color,
-                shape=ft.RoundedRectangleBorder(radius=8),
-                side=ft.BorderSide(1, bg_color),
-            ),
-            on_click=lambda e, r=role: self._handle_role_login(r),
-        )
-    
     def _handle_login(self, e):
         """Handle login button click"""
         username = self.username_field.value.strip() if self.username_field.value else ""
@@ -209,18 +155,4 @@ class LoginPage(ft.Container):
             return
         
         self.on_login_callback(username, password)
-    
-    def _handle_role_login(self, role):
-        """Handle quick role-based login"""
-        # Map roles to demo credentials
-        role_credentials = {
-            "Voter": ("voter1", "voter123"),
-            "Politician": ("politician1", "pol123"),
-            "NBI Officer": ("nbi1", "nbi123"),
-            "COMELEC": ("comelec1", "com123"),
-        }
-        
-        if role in role_credentials:
-            username, password = role_credentials[role]
-            self.on_login_callback(username, password)
 
