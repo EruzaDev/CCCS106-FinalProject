@@ -364,8 +364,7 @@ def init_demo_data():
     # Check if users already exist
     existing_users = db.get_all_users()
     if len(existing_users) > 0:
-        db.close()
-        return db  # Database already initialized
+        return db  # Database already initialized, return open connection
     
     # Create role-based demo users
     demo_users = [
@@ -400,5 +399,4 @@ def init_demo_data():
     # Create an election session
     db.create_election_session("2025 General Election")
     
-    db.close()
-    return Database()
+    return db  # Return the open database connection

@@ -105,6 +105,7 @@ class HonestBallotApp:
         
         dashboard = ComelecDashboard(
             username=self.current_session["username"],
+            db=self.db,
             on_logout=self.handle_logout,
             on_user_management=self.show_user_management,
             on_election_results=lambda: self.show_error_dialog("Info", "Election Results - Coming Soon"),
