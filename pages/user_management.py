@@ -41,6 +41,8 @@ class UserManagement(ft.Column):
                         ft.Container(height=16),
                         self._build_main_card(),
                     ],
+                    scroll=ft.ScrollMode.AUTO,
+                    expand=True,
                 ),
                 expand=True,
                 bgcolor="#F5F5F5",
