@@ -118,6 +118,8 @@ class HonestBallotApp:
     def show_user_management(self):
         """Show the User Management page"""
         self.page.clean()
+        # Clear any existing overlays
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
@@ -129,6 +131,9 @@ class HonestBallotApp:
             on_logout=self.handle_logout,
             on_back=self.show_comelec_dashboard,
         )
+        
+        # Add file picker to page overlay
+        self.page.overlay.append(user_mgmt.file_picker)
         
         self.page.add(user_mgmt)
         self.page.update()

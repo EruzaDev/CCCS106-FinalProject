@@ -32,8 +32,9 @@ class UserManagement(ft.Column):
     
     def _build_ui(self):
         """Build the main UI"""
-        # Create file picker and add to page overlay
-        self.file_picker = ft.FilePicker(on_result=self._on_image_selected)
+        # Create file picker (will be added to page overlay by main.py)
+        if not hasattr(self, 'file_picker') or self.file_picker is None:
+            self.file_picker = ft.FilePicker(on_result=self._on_image_selected)
         
         self.controls = [
             self._build_header(),
@@ -54,13 +55,6 @@ class UserManagement(ft.Column):
         ]
         self.expand = True
         self.spacing = 0
-    
-    def did_mount(self):
-        """Called when the control is added to the page"""
-        # Add file picker to page overlay
-        if self.page and self.file_picker not in self.page.overlay:
-            self.page.overlay.append(self.file_picker)
-            self.page.update()
     
     def _build_header(self):
         """Build the header"""
