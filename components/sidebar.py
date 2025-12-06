@@ -31,7 +31,7 @@ class Sidebar(ft.Container):
         self.width = 60 if collapsed else 200
         self.padding = ft.padding.all(10 if collapsed else 15)
         self.bgcolor = ft.Colors.WHITE
-        self.animate = ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT)
+        self.animate_size = 200  # Animation duration in ms
     
     def _build_ui(self):
         """Build the sidebar UI"""
