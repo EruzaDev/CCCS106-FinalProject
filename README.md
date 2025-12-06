@@ -80,7 +80,7 @@ The project follows a **Modular Component-Based** architecture:
 
 ### Milestone 4: Core Features (In Progress)
 - [ ] Post creation functionality
-- [ ] Image/video upload support
+- [ ] Image upload support
 - [ ] User profile page
 - [ ] Settings page
 - [ ] Security data page
