@@ -167,15 +167,13 @@ class PostCard(ft.Container):
                     icon_color=ft.Colors.GREY_500,
                     items=[
                         ft.PopupMenuItem(text="Report post", icon=ft.Icons.FLAG_OUTLINED, on_click=self._handle_report),
-                        ft.PopupMenuItem(text="Hide post", icon=ft.Icons.VISIBILITY_OFF_OUTLINED),
-                        ft.PopupMenuItem(text="Copy link", icon=ft.Icons.LINK),
                     ],
                 ),
             ],
             vertical_alignment=ft.CrossAxisAlignment.START,
         )
         
-        # Interaction buttons
+        # Interaction buttons (Like only)
         self.like_button = ft.TextButton(
             content=ft.Row(
                 controls=[
@@ -195,41 +193,9 @@ class PostCard(ft.Container):
             on_click=self._handle_like,
         )
         
-        comment_button = ft.TextButton(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.CHAT_BUBBLE_OUTLINE, size=18, color=ft.Colors.GREY_500),
-                    ft.Text(
-                        f"{self.comment_count}" if self.comment_count > 0 else "Comment",
-                        size=12,
-                        color=ft.Colors.GREY_600,
-                    ),
-                ],
-                spacing=5,
-            ),
-            on_click=self._handle_comment,
-        )
-        
-        share_button = ft.TextButton(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.SHARE_OUTLINED, size=18, color=ft.Colors.GREY_500),
-                    ft.Text(
-                        f"{self.share_count}" if self.share_count > 0 else "Share",
-                        size=12,
-                        color=ft.Colors.GREY_600,
-                    ),
-                ],
-                spacing=5,
-            ),
-            on_click=self._handle_share,
-        )
-        
         interactions_row = ft.Row(
             controls=[
                 self.like_button,
-                comment_button,
-                share_button,
             ],
             spacing=10,
         )

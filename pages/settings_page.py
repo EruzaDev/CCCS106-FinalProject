@@ -30,7 +30,7 @@ class SettingsPage(ft.Container):
     def __init__(self, username="EUTABLE", user_handle="@CUTIE_EUTABLE",
                  on_save=None, on_cancel=None, on_back=None,
                  on_logout=None, on_profile=None, on_home=None,
-                 on_theme_change=None, current_theme="light"):
+                 on_theme_change=None, current_theme="light", page=None):
         super().__init__()
         self.username = username
         self.user_handle = user_handle
@@ -41,6 +41,7 @@ class SettingsPage(ft.Container):
         self.on_profile = on_profile
         self.on_home = on_home
         self.on_theme_change = on_theme_change
+        self._page = page  # Store page reference for theme changes
         
         # =================================================================
         # THEME/APPEARANCE SETTINGS
@@ -396,13 +397,7 @@ class SettingsPage(ft.Container):
                 ft.Divider(height=20, color=ft.Colors.GREY_200),
                 theme_section,
                 ft.Divider(height=20, color=ft.Colors.GREY_200),
-                brand_color_section,
-                ft.Divider(height=20, color=ft.Colors.GREY_200),
                 charts_section,
-                ft.Divider(height=20, color=ft.Colors.GREY_200),
-                language_section,
-                ft.Divider(height=20, color=ft.Colors.GREY_200),
-                cookie_section,
             ],
             spacing=15,
             scroll=ft.ScrollMode.AUTO,
@@ -412,6 +407,18 @@ class SettingsPage(ft.Container):
     def _toggle_theme(self, e):
         """Handle theme toggle"""
         self.current_theme = "dark" if e.control.value else "light"
+        
+        # Update page theme directly for immediate effect
+        if self._page:
+            if self.current_theme == "dark":
+                self._page.theme_mode = ft.ThemeMode.DARK
+                self._page.bgcolor = "#1a1a2e"
+            else:
+                self._page.theme_mode = ft.ThemeMode.LIGHT
+                self._page.bgcolor = ft.Colors.GREY_100
+            self._page.update()
+        
+        # Also call the callback for app-level state
         if self.on_theme_change:
             self.on_theme_change(self.current_theme)
     

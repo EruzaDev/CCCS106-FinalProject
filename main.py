@@ -247,6 +247,7 @@ class EutableApp:
             on_profile=lambda: self.show_profile_page(username, user_handle),
             on_theme_change=self._handle_theme_change,
             current_theme=self.current_theme,
+            page=self.page,
         )
         
         self.page.add(settings_page)
