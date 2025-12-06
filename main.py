@@ -13,11 +13,17 @@ from pages.profile_page import ProfilePage
 
 
 class EutableApp:
-    """Main application class managing page routing"""
+    """Main application class managing page routing and app state"""
+    
+    # Responsive breakpoints
+    MOBILE_BREAKPOINT = 768
+    TABLET_BREAKPOINT = 1024
     
     def __init__(self):
         self.page = None
         self.current_user = None
+        self.current_theme = "light"  # "light" or "dark"
+        self.current_breakpoint = "desktop"  # "mobile", "tablet", "desktop"
     
     def main(self, page: ft.Page):
         """Main entry point for the Flet app"""
@@ -28,13 +34,66 @@ class EutableApp:
         page.bgcolor = ft.Colors.GREY_100
         page.window.width = 1280
         page.window.height = 800
-        page.window.min_width = 1024
+        page.window.min_width = 360  # Allow mobile-sized window
         page.window.min_height = 600
         page.padding = 0
         page.spacing = 0
         
+        # Set initial theme
+        self._apply_theme(self.current_theme)
+        
+        # Set up resize handler for responsive design
+        page.on_resized = self._handle_resize
+        self._update_breakpoint(page.window.width)
+        
         # Start with signup page
         self.show_signup_page()
+    
+    def _apply_theme(self, theme):
+        """Apply the selected theme to the app"""
+        self.current_theme = theme
+        if theme == "dark":
+            self.page.theme_mode = ft.ThemeMode.DARK
+            self.page.bgcolor = "#1a1a2e"
+        else:
+            self.page.theme_mode = ft.ThemeMode.LIGHT
+            self.page.bgcolor = ft.Colors.GREY_100
+        self.page.update()
+    
+    def _handle_resize(self, e):
+        """Handle window resize for responsive design"""
+        width = self.page.window.width
+        old_breakpoint = self.current_breakpoint
+        self._update_breakpoint(width)
+        
+        # Only rebuild if breakpoint changed
+        if old_breakpoint != self.current_breakpoint:
+            self._rebuild_current_page()
+    
+    def _update_breakpoint(self, width):
+        """Update the current breakpoint based on window width"""
+        if width < self.MOBILE_BREAKPOINT:
+            self.current_breakpoint = "mobile"
+        elif width < self.TABLET_BREAKPOINT:
+            self.current_breakpoint = "tablet"
+        else:
+            self.current_breakpoint = "desktop"
+    
+    def _rebuild_current_page(self):
+        """Rebuild the current page with new breakpoint"""
+        # This will be enhanced as pages become responsive
+        pass
+    
+    def get_responsive_config(self):
+        """Get responsive configuration for current breakpoint"""
+        return {
+            "breakpoint": self.current_breakpoint,
+            "is_mobile": self.current_breakpoint == "mobile",
+            "is_tablet": self.current_breakpoint == "tablet",
+            "is_desktop": self.current_breakpoint == "desktop",
+            "sidebar_width": 60 if self.current_breakpoint == "mobile" else 200,
+            "show_right_sidebar": self.current_breakpoint == "desktop",
+        }
     
     def show_login_page(self):
         """Show the login page"""
@@ -186,15 +245,23 @@ class EutableApp:
             on_back=lambda: self.show_home_page(username, user_handle),
             on_logout=self.handle_logout,
             on_profile=lambda: self.show_profile_page(username, user_handle),
+            on_theme_change=self._handle_theme_change,
+            current_theme=self.current_theme,
         )
         
         self.page.add(settings_page)
         self.page.update()
     
+    def _handle_theme_change(self, theme):
+        """Handle theme change from settings"""
+        self._apply_theme(theme)
+    
     def handle_settings_save(self, settings_data, username, user_handle):
         """Handle saving settings and return to home"""
         print(f"Settings saved: {settings_data}")
-        # TODO: Apply theme/settings changes here
+        # Apply theme if changed
+        if "theme" in settings_data:
+            self._apply_theme(settings_data["theme"])
         self.show_home_page(username, user_handle)
     
     def close_dialog(self, dialog):

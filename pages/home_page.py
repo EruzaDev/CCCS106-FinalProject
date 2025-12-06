@@ -112,6 +112,8 @@ class HomePage(ft.Container):
                     right=20,
                     top=70,
                 ),
+                # File picker for post creation (needs to be in page overlay)
+                self.post_container.post_creator.file_picker,
             ],
             expand=True,
         )
@@ -163,13 +165,7 @@ class HomePage(ft.Container):
     def _handle_post_submit(self, content):
         """Handle post submission"""
         print(f"New post: {content}")
-        # Add the new post to the feed
-        self.post_container.add_post(
-            username=self.username,
-            handle=self.user_handle,
-            content=content,
-            avatar_color=ft.Colors.BLUE_400,
-        )
+        # Post is already added by the post container
     
     def _handle_follow(self, user):
         """Handle follow button click"""

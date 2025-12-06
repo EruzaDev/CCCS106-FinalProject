@@ -29,11 +29,12 @@ class ProfilePage(ft.Container):
         followers_count="5K",
         likes_count="1M",
         # Profile content
-        about_me="fojahbfboasnpfjmasmflcmaxclam,cl",
+        about_me="Welcome to my profile! I'm passionate about voter education and transparent governance.",
         # Callbacks
         on_logout=None,
         on_settings=None,
         on_home=None,
+        on_edit_profile=None,
     ):
         super().__init__()
         
@@ -49,6 +50,18 @@ class ProfilePage(ft.Container):
         self.on_logout = on_logout
         self.on_settings = on_settings
         self.on_home = on_home
+        self.on_edit_profile = on_edit_profile
+        
+        # Edit mode state
+        self.is_editing = False
+        
+        # File picker for profile/cover photo
+        self.profile_file_picker = ft.FilePicker(
+            on_result=self._handle_profile_photo_picked,
+        )
+        self.cover_file_picker = ft.FilePicker(
+            on_result=self._handle_cover_photo_picked,
+        )
         
         # Image paths (can be updated via methods)
         self.profile_picture_path = "assets/fd875946-c220-48f7-a5db-e8e1d3e0a2a0.jpg"
@@ -62,11 +75,11 @@ class ProfilePage(ft.Container):
         
         # Store location items
         self.location_items = [
-            "fojahbfboasnpfjm",
-            "fojahbfboasnpfjm",
-            "fojahbfboasnpfjm",
-            "fojahbfboasnpfjm",
-            "fojahbfboasnpfjm",
+            "Metro Manila, Philippines",
+            "Honest Ballot Inc.",
+            "Open to collaborate",
+            "facebook.com/honestballot",
+            "contact@honestballot.com",
         ]
         
         # Create components
@@ -89,6 +102,7 @@ class ProfilePage(ft.Container):
         self.cover_photo_ref = None
         self.posts_column_ref = None
         self.media_row_ref = None
+        self.about_me_text_ref = None
         
         # Build the UI
         self.content = self._build_ui()
@@ -136,6 +150,9 @@ class ProfilePage(ft.Container):
                 self.top_taskbar,
                 ft.Divider(height=1, color=ft.Colors.GREY_300),
                 main_content,
+                # File pickers (hidden)
+                self.profile_file_picker,
+                self.cover_file_picker,
             ],
             spacing=0,
             expand=True,
@@ -161,25 +178,39 @@ class ProfilePage(ft.Container):
         )
     
     def _build_about_me_section(self):
-        """Build the About Me card"""
+        """Build the About Me card with edit capability"""
+        
+        self.about_me_text_ref = ft.Text(
+            self.about_me,
+            size=12,
+            color=ft.Colors.GREY_700,
+        )
         
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    # Header
-                    ft.Text(
-                        "ABOUT ME",
-                        size=14,
-                        weight=ft.FontWeight.BOLD,
-                        color=ft.Colors.BLACK,
+                    # Header with edit button
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                "ABOUT ME",
+                                size=14,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.BLACK,
+                            ),
+                            ft.Container(expand=True),
+                            ft.IconButton(
+                                icon=ft.Icons.EDIT_OUTLINED,
+                                icon_size=16,
+                                icon_color=ft.Colors.BLUE_400,
+                                tooltip="Edit about me",
+                                on_click=self._show_edit_about_dialog,
+                            ),
+                        ],
                     ),
                     ft.Container(height=8),
                     # About text (can be updated)
-                    ft.Text(
-                        self.about_me,
-                        size=12,
-                        color=ft.Colors.GREY_700,
-                    ),
+                    self.about_me_text_ref,
                 ],
                 spacing=0,
             ),
@@ -187,6 +218,47 @@ class ProfilePage(ft.Container):
             border_radius=10,
             padding=15,
         )
+    
+    def _show_edit_about_dialog(self, e):
+        """Show dialog to edit about me text"""
+        about_input = ft.TextField(
+            value=self.about_me,
+            multiline=True,
+            min_lines=3,
+            max_lines=6,
+            border_radius=8,
+        )
+        
+        def save_about(e):
+            self.about_me = about_input.value
+            if self.about_me_text_ref:
+                self.about_me_text_ref.value = self.about_me
+                self.about_me_text_ref.update()
+            dialog.open = False
+            self.page.update() if hasattr(self, 'page') and self.page else None
+        
+        def close_dialog(e):
+            dialog.open = False
+            self.page.update() if hasattr(self, 'page') and self.page else None
+        
+        dialog = ft.AlertDialog(
+            title=ft.Text("Edit About Me"),
+            content=ft.Container(
+                content=about_input,
+                width=400,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=close_dialog),
+                ft.ElevatedButton("Save", on_click=save_about),
+            ],
+        )
+        
+        # Get page reference from parent
+        page = self.top_taskbar.page if hasattr(self.top_taskbar, 'page') else None
+        if page:
+            page.overlay.append(dialog)
+            dialog.open = True
+            page.update()
     
     def _build_location_section(self):
         """Build the location/info items section"""
@@ -777,3 +849,31 @@ class ProfilePage(ft.Container):
         """Handle click on a media thumbnail"""
         print(f"Media {index} clicked")
         # Future: Open media viewer
+    
+    def _handle_profile_photo_picked(self, e: ft.FilePickerResultEvent):
+        """Handle profile photo selection"""
+        if e.files and len(e.files) > 0:
+            self.profile_picture_path = e.files[0].path
+            self.update_profile_picture(self.profile_picture_path)
+    
+    def _handle_cover_photo_picked(self, e: ft.FilePickerResultEvent):
+        """Handle cover photo selection"""
+        if e.files and len(e.files) > 0:
+            self.cover_photo_path = e.files[0].path
+            self.update_cover_photo(self.cover_photo_path)
+    
+    def _open_profile_photo_picker(self, e):
+        """Open file picker for profile photo"""
+        self.profile_file_picker.pick_files(
+            allowed_extensions=["png", "jpg", "jpeg", "webp"],
+            allow_multiple=False,
+            dialog_title="Select profile picture",
+        )
+    
+    def _open_cover_photo_picker(self, e):
+        """Open file picker for cover photo"""
+        self.cover_file_picker.pick_files(
+            allowed_extensions=["png", "jpg", "jpeg", "webp"],
+            allow_multiple=False,
+            dialog_title="Select cover photo",
+        )

@@ -10,17 +10,15 @@ from components.sidebar import Sidebar
 
 """
 =============================================================================
-SETTINGS PAGE - TEMPLATE FOR GROUPMATE
+SETTINGS PAGE - USER PREFERENCES & APPEARANCE
 =============================================================================
 
-TASK: Implement the Appearance/Theme settings functionality
-- Brand color picker (connect to app-wide theme)
-- Dashboard chart styles
+Features:
+- Dark/Light mode toggle
 - Language selection
+- Brand color customization
+- Dashboard chart styles
 - Cookie banner options
-
-The sidebar and top taskbar are already included.
-Your groupmate just needs to make the appearance options functional.
 
 =============================================================================
 """
@@ -31,7 +29,8 @@ class SettingsPage(ft.Container):
     
     def __init__(self, username="EUTABLE", user_handle="@CUTIE_EUTABLE",
                  on_save=None, on_cancel=None, on_back=None,
-                 on_logout=None, on_profile=None, on_home=None):
+                 on_logout=None, on_profile=None, on_home=None,
+                 on_theme_change=None, current_theme="light"):
         super().__init__()
         self.username = username
         self.user_handle = user_handle
@@ -41,10 +40,12 @@ class SettingsPage(ft.Container):
         self.on_logout = on_logout
         self.on_profile = on_profile
         self.on_home = on_home
+        self.on_theme_change = on_theme_change
         
         # =================================================================
-        # THEME/APPEARANCE SETTINGS - GROUPMATE: MODIFY THESE
+        # THEME/APPEARANCE SETTINGS
         # =================================================================
+        self.current_theme = current_theme  # "light" or "dark"
         self.brand_color = "#444CE7"
         self.chart_style = "Default"
         self.language = "English (UK)"
@@ -225,6 +226,47 @@ class SettingsPage(ft.Container):
             ],
         )
         
+        # Theme mode section (Dark/Light)
+        self.theme_switch = ft.Switch(
+            value=self.current_theme == "dark",
+            on_change=self._toggle_theme,
+            active_color=ft.Colors.BLUE_600,
+        )
+        
+        theme_section = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Column(
+                        controls=[
+                            ft.Text("Dark Mode", size=14, weight=ft.FontWeight.W_600, color=ft.Colors.BLACK),
+                            ft.Text("Switch between light and dark theme", size=12, color=ft.Colors.GREY_600),
+                        ],
+                        spacing=2,
+                    ),
+                    ft.Container(expand=True),
+                    ft.Row(
+                        controls=[
+                            ft.Icon(
+                                ft.Icons.LIGHT_MODE,
+                                size=20,
+                                color=ft.Colors.AMBER_500 if self.current_theme == "light" else ft.Colors.GREY_400,
+                            ),
+                            self.theme_switch,
+                            ft.Icon(
+                                ft.Icons.DARK_MODE,
+                                size=20,
+                                color=ft.Colors.BLUE_800 if self.current_theme == "dark" else ft.Colors.GREY_400,
+                            ),
+                        ],
+                        spacing=10,
+                    ),
+                ],
+            ),
+            padding=ft.padding.all(15),
+            bgcolor=ft.Colors.GREY_50,
+            border_radius=10,
+        )
+        
         # Brand color section
         brand_color_section = ft.Row(
             controls=[
@@ -352,6 +394,8 @@ class SettingsPage(ft.Container):
             controls=[
                 appearance_header,
                 ft.Divider(height=20, color=ft.Colors.GREY_200),
+                theme_section,
+                ft.Divider(height=20, color=ft.Colors.GREY_200),
                 brand_color_section,
                 ft.Divider(height=20, color=ft.Colors.GREY_200),
                 charts_section,
@@ -364,6 +408,12 @@ class SettingsPage(ft.Container):
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
+    
+    def _toggle_theme(self, e):
+        """Handle theme toggle"""
+        self.current_theme = "dark" if e.control.value else "light"
+        if self.on_theme_change:
+            self.on_theme_change(self.current_theme)
     
     def _select_chart_style(self, style):
         """Handle chart style selection"""
@@ -385,6 +435,7 @@ class SettingsPage(ft.Container):
         """Handle save button click"""
         if self.on_save:
             self.on_save({
+                "theme": self.current_theme,
                 "brand_color": self.brand_color,
                 "chart_style": self.chart_style,
                 "language": self.language,
