@@ -295,7 +295,7 @@ class Database:
         self.connection.commit()
     
     def update_voter(self, user_id, full_name, email, username):
-        """Update voter account"""
+        """Update voter account without changing password"""
         try:
             self.cursor.execute('''
                 UPDATE users SET full_name = ?, email = ?, username = ? WHERE id = ?
@@ -305,8 +305,20 @@ class Database:
         except sqlite3.IntegrityError:
             return False
     
+    def update_voter_with_password(self, user_id, full_name, email, username, password):
+        """Update voter account with new password"""
+        try:
+            password_hash = self.hash_password(password)
+            self.cursor.execute('''
+                UPDATE users SET full_name = ?, email = ?, username = ?, password_hash = ? WHERE id = ?
+            ''', (full_name, email, username, password_hash, user_id))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
     def update_politician(self, user_id, full_name, email, username, position, party, biography, profile_image=None):
-        """Update politician account"""
+        """Update politician account without changing password"""
         try:
             if profile_image:
                 self.cursor.execute('''
@@ -316,6 +328,23 @@ class Database:
                 self.cursor.execute('''
                     UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ? WHERE id = ?
                 ''', (full_name, email, username, position, party, biography, user_id))
+            self.connection.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+    
+    def update_politician_with_password(self, user_id, full_name, email, username, position, party, biography, password, profile_image=None):
+        """Update politician account with new password"""
+        try:
+            password_hash = self.hash_password(password)
+            if profile_image:
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ?, profile_image = ? WHERE id = ?
+                ''', (full_name, email, username, position, party, biography, password_hash, profile_image, user_id))
+            else:
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ? WHERE id = ?
+                ''', (full_name, email, username, position, party, biography, password_hash, user_id))
             self.connection.commit()
             return True
         except sqlite3.IntegrityError:

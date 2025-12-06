@@ -3,6 +3,36 @@ import base64
 import os
 
 
+# Dropdown options for positions and parties
+POSITION_OPTIONS = [
+    "President",
+    "Vice President",
+    "Senator",
+    "Governor",
+    "Vice Governor",
+    "Mayor",
+    "Vice Mayor",
+    "Congressman",
+    "Councilor",
+    "Barangay Captain",
+]
+
+PARTY_OPTIONS = [
+    "PDP-Laban",
+    "Liberal Party",
+    "Nacionalista Party",
+    "NPC (Nationalist People's Coalition)",
+    "Lakas-CMD",
+    "NUP (National Unity Party)",
+    "Aksyon Demokratiko",
+    "Progressive Alliance",
+    "United Citizens Party",
+    "Green Coalition",
+    "Democratic Reform Party",
+    "Independent",
+]
+
+
 class UserManagement(ft.Column):
     """User Management page for COMELEC - Create and manage voter and politician accounts"""
     
@@ -22,6 +52,7 @@ class UserManagement(ft.Column):
         
         # Edit mode
         self.editing_user_id = None
+        self.editing_user_data = None
         
         # Politician image data
         self.politician_image_data = None
@@ -266,28 +297,43 @@ class UserManagement(ft.Column):
     
     def _build_voter_form(self):
         """Build create/edit voter form"""
+        # Pre-fill values if editing
+        name_value = ""
+        username_value = ""
+        email_value = ""
+        
+        if self.editing_user_id and self.editing_user_data:
+            name_value = self.editing_user_data.get("full_name", "")
+            username_value = self.editing_user_data.get("username", "")
+            email_value = self.editing_user_data.get("email", "")
+        
         self.voter_name_field = ft.TextField(
             label="Full Name *",
             hint_text="e.g., Juan dela Cruz",
+            value=name_value,
             border_radius=8,
         )
         self.voter_username_field = ft.TextField(
             label="Username *",
             hint_text="e.g., juandelacruz",
+            value=username_value,
             border_radius=8,
         )
         self.voter_email_field = ft.TextField(
             label="Email *",
             hint_text="e.g., juan@email.com",
+            value=email_value,
             border_radius=8,
         )
         self.voter_password_field = ft.TextField(
-            label="Password *",
+            label="Password *" if not self.editing_user_id else "Password (leave blank to keep current)",
             hint_text="••••••••",
             password=True,
             can_reveal_password=True,
             border_radius=8,
         )
+        
+        button_text = "Update Account" if self.editing_user_id else "Create Account"
         
         return ft.Container(
             content=ft.Column(
@@ -316,10 +362,10 @@ class UserManagement(ft.Column):
                     ft.Row(
                         [
                             ft.ElevatedButton(
-                                "Create Account",
+                                button_text,
                                 bgcolor="#4CAF50",
                                 color=ft.Colors.WHITE,
-                                on_click=lambda e: self._create_voter(),
+                                on_click=lambda e: self._save_voter(),
                                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
                             ),
                             ft.OutlinedButton(
@@ -346,6 +392,10 @@ class UserManagement(ft.Column):
             display_name = full_name if full_name else username
             display_status = status if status else "active"
             
+            # Create closure to capture user_id
+            def make_edit_handler(uid, uname, uemail, ufull_name):
+                return lambda e: self._edit_voter(uid, uname, uemail, ufull_name)
+            
             rows.append(
                 ft.DataRow(
                     cells=[
@@ -366,6 +416,7 @@ class UserManagement(ft.Column):
                         ft.DataCell(
                             ft.TextButton(
                                 "Edit",
+                                on_click=make_edit_handler(user_id, username, email, full_name),
                                 style=ft.ButtonStyle(color="#5C6BC0"),
                             )
                         ),
@@ -425,34 +476,64 @@ class UserManagement(ft.Column):
         return ft.Column(content_items)
     
     def _build_politician_form(self):
-        """Build create/edit politician form with image upload"""
+        """Build create/edit politician form with image upload and dropdowns"""
+        # Pre-fill values if editing
+        name_value = ""
+        email_value = ""
+        position_value = None
+        party_value = None
+        username_value = ""
+        biography_value = ""
+        
+        if self.editing_user_id and self.editing_user_data:
+            name_value = self.editing_user_data.get("full_name", "")
+            email_value = self.editing_user_data.get("email", "")
+            position_value = self.editing_user_data.get("position", "")
+            party_value = self.editing_user_data.get("party", "")
+            username_value = self.editing_user_data.get("username", "")
+            biography_value = self.editing_user_data.get("biography", "")
+            if self.editing_user_data.get("profile_image"):
+                self.politician_image_data = self.editing_user_data.get("profile_image")
+        
         self.politician_name_field = ft.TextField(
             label="Full Name *",
             hint_text="e.g., Maria Santos",
+            value=name_value,
             border_radius=8,
         )
         self.politician_email_field = ft.TextField(
             label="Email *",
             hint_text="e.g., maria@email.com",
+            value=email_value,
             border_radius=8,
         )
-        self.politician_position_field = ft.TextField(
+        
+        # Position dropdown
+        self.politician_position_dropdown = ft.Dropdown(
             label="Position *",
-            hint_text="e.g., Senator, Governor",
+            hint_text="Select position",
+            options=[ft.dropdown.Option(pos) for pos in POSITION_OPTIONS],
+            value=position_value if position_value in POSITION_OPTIONS else None,
             border_radius=8,
         )
-        self.politician_party_field = ft.TextField(
+        
+        # Party dropdown
+        self.politician_party_dropdown = ft.Dropdown(
             label="Political Party *",
-            hint_text="e.g., Progressive Alliance",
+            hint_text="Select party",
+            options=[ft.dropdown.Option(party) for party in PARTY_OPTIONS],
+            value=party_value if party_value in PARTY_OPTIONS else None,
             border_radius=8,
         )
+        
         self.politician_username_field = ft.TextField(
             label="Username *",
             hint_text="e.g., mariasantos",
+            value=username_value,
             border_radius=8,
         )
         self.politician_password_field = ft.TextField(
-            label="Password *",
+            label="Password *" if not self.editing_user_id else "Password (leave blank to keep current)",
             hint_text="••••••••",
             password=True,
             can_reveal_password=True,
@@ -461,6 +542,7 @@ class UserManagement(ft.Column):
         self.politician_biography_field = ft.TextField(
             label="Biography *",
             hint_text="Brief biography and political background...",
+            value=biography_value,
             multiline=True,
             min_lines=3,
             max_lines=5,
@@ -500,6 +582,8 @@ class UserManagement(ft.Column):
                 alignment=ft.alignment.center,
             )
         
+        button_text = "Update Account" if self.editing_user_id else "Create Account"
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -518,8 +602,8 @@ class UserManagement(ft.Column):
                     ),
                     ft.Row(
                         [
-                            ft.Container(self.politician_position_field, expand=True),
-                            ft.Container(self.politician_party_field, expand=True),
+                            ft.Container(self.politician_position_dropdown, expand=True),
+                            ft.Container(self.politician_party_dropdown, expand=True),
                         ],
                         spacing=16,
                     ),
@@ -561,10 +645,10 @@ class UserManagement(ft.Column):
                     ft.Row(
                         [
                             ft.ElevatedButton(
-                                "Create Account",
+                                button_text,
                                 bgcolor="#4CAF50",
                                 color=ft.Colors.WHITE,
-                                on_click=lambda e: self._create_politician(),
+                                on_click=lambda e: self._save_politician(),
                                 style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
                             ),
                             ft.OutlinedButton(
@@ -593,6 +677,10 @@ class UserManagement(ft.Column):
             display_position = position if position else "-"
             display_party = party if party else "-"
             
+            # Create closure to capture all user data
+            def make_edit_handler(uid, uname, uemail, ufull_name, uposition, uparty, ubio, uimg):
+                return lambda e: self._edit_politician(uid, uname, uemail, ufull_name, uposition, uparty, ubio, uimg)
+            
             rows.append(
                 ft.DataRow(
                     cells=[
@@ -614,6 +702,7 @@ class UserManagement(ft.Column):
                         ft.DataCell(
                             ft.TextButton(
                                 "Edit",
+                                on_click=make_edit_handler(user_id, username, email, full_name, position, party, biography, profile_image),
                                 style=ft.ButtonStyle(color="#5C6BC0"),
                             )
                         ),
@@ -654,14 +743,43 @@ class UserManagement(ft.Column):
         """Toggle voter form visibility"""
         self.show_voter_form = not self.show_voter_form
         self.editing_user_id = None
+        self.editing_user_data = None
         self._refresh_ui()
     
     def _toggle_politician_form(self):
         """Toggle politician form visibility"""
         self.show_politician_form = not self.show_politician_form
         self.editing_user_id = None
+        self.editing_user_data = None
         self.politician_image_data = None
         self.politician_image_path = None
+        self._refresh_ui()
+    
+    def _edit_voter(self, user_id, username, email, full_name):
+        """Open edit form for voter"""
+        self.editing_user_id = user_id
+        self.editing_user_data = {
+            "username": username,
+            "email": email,
+            "full_name": full_name,
+        }
+        self.show_voter_form = True
+        self._refresh_ui()
+    
+    def _edit_politician(self, user_id, username, email, full_name, position, party, biography, profile_image):
+        """Open edit form for politician"""
+        self.editing_user_id = user_id
+        self.editing_user_data = {
+            "username": username,
+            "email": email,
+            "full_name": full_name,
+            "position": position,
+            "party": party,
+            "biography": biography,
+            "profile_image": profile_image,
+        }
+        self.politician_image_data = profile_image
+        self.show_politician_form = True
         self._refresh_ui()
     
     def _pick_image(self):
@@ -690,48 +808,100 @@ class UserManagement(ft.Column):
                 print(f"Error loading image: {ex}")
                 self._show_error(f"Error loading image: {ex}")
     
-    def _create_voter(self):
-        """Create new voter account"""
+    def _save_voter(self):
+        """Create or update voter account"""
         name = self.voter_name_field.value
         username = self.voter_username_field.value
         email = self.voter_email_field.value
         password = self.voter_password_field.value
         
-        if not all([name, username, email, password]):
+        if not all([name, username, email]):
             self._show_error("Please fill all required fields")
             return
         
-        success = self.db.create_voter(username, email, password, name)
-        if success:
-            self.show_voter_form = False
-            self._refresh_ui()
+        if self.editing_user_id:
+            # Update existing voter
+            if password:
+                # Update with new password
+                success = self.db.update_voter_with_password(self.editing_user_id, name, email, username, password)
+            else:
+                # Update without changing password
+                success = self.db.update_voter(self.editing_user_id, name, email, username)
+            
+            if success:
+                self.show_voter_form = False
+                self.editing_user_id = None
+                self.editing_user_data = None
+                self._refresh_ui()
+                self._show_success("Voter account updated successfully")
+            else:
+                self._show_error("Username or email already exists")
         else:
-            self._show_error("Username or email already exists")
+            # Create new voter
+            if not password:
+                self._show_error("Password is required for new accounts")
+                return
+            
+            success = self.db.create_voter(username, email, password, name)
+            if success:
+                self.show_voter_form = False
+                self._refresh_ui()
+                self._show_success("Voter account created successfully")
+            else:
+                self._show_error("Username or email already exists")
     
-    def _create_politician(self):
-        """Create new politician account"""
+    def _save_politician(self):
+        """Create or update politician account"""
         name = self.politician_name_field.value
         email = self.politician_email_field.value
-        position = self.politician_position_field.value
-        party = self.politician_party_field.value
+        position = self.politician_position_dropdown.value
+        party = self.politician_party_dropdown.value
         username = self.politician_username_field.value
         password = self.politician_password_field.value
         biography = self.politician_biography_field.value
         
-        if not all([name, email, position, party, username, password, biography]):
+        if not all([name, email, position, party, username, biography]):
             self._show_error("Please fill all required fields")
             return
         
-        success = self.db.create_politician(
-            username, email, password, name, position, party, biography, self.politician_image_data
-        )
-        if success:
-            self.show_politician_form = False
-            self.politician_image_data = None
-            self.politician_image_path = None
-            self._refresh_ui()
+        if self.editing_user_id:
+            # Update existing politician
+            if password:
+                success = self.db.update_politician_with_password(
+                    self.editing_user_id, name, email, username, position, party, biography, password, self.politician_image_data
+                )
+            else:
+                success = self.db.update_politician(
+                    self.editing_user_id, name, email, username, position, party, biography, self.politician_image_data
+                )
+            
+            if success:
+                self.show_politician_form = False
+                self.editing_user_id = None
+                self.editing_user_data = None
+                self.politician_image_data = None
+                self.politician_image_path = None
+                self._refresh_ui()
+                self._show_success("Politician account updated successfully")
+            else:
+                self._show_error("Username or email already exists")
         else:
-            self._show_error("Username or email already exists")
+            # Create new politician
+            if not password:
+                self._show_error("Password is required for new accounts")
+                return
+            
+            success = self.db.create_politician(
+                username, email, password, name, position, party, biography, self.politician_image_data
+            )
+            if success:
+                self.show_politician_form = False
+                self.politician_image_data = None
+                self.politician_image_path = None
+                self._refresh_ui()
+                self._show_success("Politician account created successfully")
+            else:
+                self._show_error("Username or email already exists")
     
     def _show_error(self, message):
         """Show error snackbar"""
@@ -739,6 +909,16 @@ class UserManagement(ft.Column):
             self.page.snack_bar = ft.SnackBar(
                 content=ft.Text(message),
                 bgcolor=ft.Colors.RED_400,
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+    
+    def _show_success(self, message):
+        """Show success snackbar"""
+        if self.page:
+            self.page.snack_bar = ft.SnackBar(
+                content=ft.Text(message),
+                bgcolor=ft.Colors.GREEN_400,
             )
             self.page.snack_bar.open = True
             self.page.update()
