@@ -9,9 +9,10 @@ HonestBallot is a voting platform that demonstrates how technology can support e
 ### User Roles
 
 1. **Voters** - Cast votes, view election results
-2. **Candidates** - Manage profiles and campaign information
-3. **Election Officials** - Manage voting process, view real-time results
-4. **Administrators** - System oversight and configuration
+2. **Candidates/Politicians** - Manage profiles and campaign information
+3. **COMELEC Officials** - Manage voting process, view real-time results, verify achievements
+4. **NBI Officers** - Manage legal records for candidates, verify/track legal cases
+5. **Administrators** - System oversight and configuration
 
 ## 🚀 Features
 
@@ -34,6 +35,14 @@ HonestBallot is a voting platform that demonstrates how technology can support e
 - ✅ Voter registration
 - ✅ Results verification
 - ✅ Audit trails and logging
+
+### NBI Legal Records Management
+- ✅ Legal records tracking for candidates
+- ✅ Record types: Graft, Corruption, Tax Issues, Criminal Cases, etc.
+- ✅ Record status management (pending, verified, dismissed, rejected)
+- ✅ Add/Edit/Delete legal records
+- ✅ Search and filter records by politician
+- ✅ Statistics dashboard (total, verified, pending records)
 
 ## 🛠️ Technology Stack
 
@@ -71,7 +80,13 @@ CCCS106-FinalProject/
 │   ├── signup_page.py        # User registration
 │   ├── home_page.py          # Main dashboard
 │   ├── profile_page.py       # User profile
-│   └── settings_page.py      # User settings
+│   ├── settings_page.py      # User settings
+│   ├── comelec_dashboard.py  # COMELEC admin dashboard
+│   ├── nbi_dashboard.py      # NBI legal records dashboard
+│   ├── voter_dashboard.py    # Voter main interface
+│   ├── politician_dashboard.py # Politician profile management
+│   ├── voting_page.py        # Voting interface
+│   └── election_results.py   # Results display
 └── models/                    # Data models and database
     ├── __init__.py
     ├── database.py           # SQLite database manager
@@ -93,9 +108,10 @@ CCCS106-FinalProject/
 - [x] Real-time vote counting
 
 ### Phase 3: Results & Admin
-- [ ] Results dashboard
-- [ ] Election analytics
-- [ ] Admin panel
+- [x] Results dashboard
+- [x] Election analytics
+- [x] Admin panel (COMELEC Dashboard)
+- [x] NBI Dashboard for legal records
 - [ ] Audit trails
 
 ### Phase 4: Polish & Deployment
@@ -138,23 +154,30 @@ python main.py
 
 ### Demo User Credentials
 
-The application comes with 5 pre-configured users. Each can be logged in separately to create unique sessions:
+The application comes with pre-configured users for each role:
 
+**Voters:**
 ```
-Email: alice@honestballot.local
-Password: password123
+Username: voter1
+Password: voter123
+```
 
-Email: bob@honestballot.local
-Password: password123
+**COMELEC Official:**
+```
+Username: comelec1
+Password: com123
+```
 
-Email: charlie@honestballot.local
-Password: password123
+**NBI Officer:**
+```
+Username: nbi1
+Password: nbi123
+```
 
-Email: diana@honestballot.local
-Password: password123
-
-Email: eve@honestballot.local
-Password: password123
+**Politicians:**
+```
+Username: Roberto Cruz (or any politician name)
+Password: pol123
 ```
 
 ### Dependencies

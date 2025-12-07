@@ -3,29 +3,29 @@
 ## System Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    Flet UI Framework                        │
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │ Login Page   │  │  Home Page   │  │ Profile Page │     │
-│  │              │  │              │  │              │     │
-│  │ • Email      │  │ • Dashboard  │  │ • User Info  │     │
-│  │ • Password   │  │ • Navigation │  │ • Settings   │     │
-│  │ • Submit     │  │ • Features   │  │ • Back       │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│        │                   │                   │            │
-│        └───────────────────┴───────────────────┘            │
-│                           │                                  │
-└───────────────────────────┼──────────────────────────────────┘
-                            │
-                    ┌───────▼────────┐
-                    │ Main.py (App)  │
-                    │ Controller     │
-                    └───────┬────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-        ▼                   ▼                   ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    Flet UI Framework                                        │
+│                                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ Login Page   │  │ Voter        │  │ COMELEC      │  │ NBI          │    │
+│  │              │  │ Dashboard    │  │ Dashboard    │  │ Dashboard    │    │
+│  │ • Email      │  │ • View       │  │ • Manage     │  │ • Legal      │    │
+│  │ • Password   │  │   Candidates │  │   Elections  │  │   Records    │    │
+│  │ • Submit     │  │ • Vote       │  │ • Verify     │  │ • Add/Edit   │    │
+│  │              │  │ • Results    │  │   Results    │  │ • Verify     │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│        │                   │                   │                │           │
+│        └───────────────────┴───────────────────┴────────────────┘           │
+│                                    │                                         │
+└────────────────────────────────────┼─────────────────────────────────────────┘
+                                     │
+                    ┌────────────────▼────────────────┐
+                    │       Main.py (App Controller)  │
+                    └────────────────┬────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
 │ SessionManager   │ │ Database Layer   │ │ Page Session     │
 │                  │ │ (SQLite)         │ │ Storage (Flet)   │
@@ -34,6 +34,7 @@
 │ • End Session    │ │ • Store Sessions │ │ • Session Token  │
 │ • Track Active   │ │ • Record Votes   │ │ • Manager Ref    │
 │   Sessions       │ │ • Candidates     │ │ • Database Ref   │
+│                  │ │ • Legal Records  │ │                  │
 └──────────────────┘ └──────────────────┘ └──────────────────┘
         │                   │
         └───────────────────┼───────────────────┐
@@ -49,6 +50,7 @@
                     │ │ candidates      │ │     │
                     │ │ election_       │ │     │
                     │ │   sessions      │ │     │
+                    │ │ legal_records   │ │     │
                     │ └─────────────────┘ │     │
                     └─────────────────────┘     │
                                                 │
@@ -164,6 +166,22 @@ USER 1: Alice                   USER 2: Bob                     USER 3: Charlie
 │                             │ is_active            │   │
 │                             │ created_at           │   │
 │                             └──────────────────────┘   │
+│                                                         │
+│  LEGAL_RECORDS TABLE (NBI)                             │
+│  ┌──────────────────────────┐                          │
+│  │ id (PK)                  │                          │
+│  │ politician_id (FK)───────→ users.id                 │
+│  │ record_type              │  (Graft, Tax, etc.)      │
+│  │ title                    │                          │
+│  │ description              │                          │
+│  │ record_date              │                          │
+│  │ status                   │  (pending/verified/      │
+│  │                          │   dismissed/rejected)    │
+│  │ added_by (FK)────────────→ users.id (NBI officer)   │
+│  │ verified_by (FK)─────────→ users.id                 │
+│  │ verified_at              │                          │
+│  │ created_at               │                          │
+│  └──────────────────────────┘                          │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
