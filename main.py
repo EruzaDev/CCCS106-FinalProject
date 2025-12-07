@@ -112,6 +112,7 @@ class HonestBallotApp:
                 on_logout=self.handle_logout,
                 on_profile_view=self.show_politician_profile,
                 on_compare=self.show_candidate_comparison,
+                on_voting_started=self.show_home_page,  # Auto-refresh when voting starts
             )
             self.page.add(dashboard)
         

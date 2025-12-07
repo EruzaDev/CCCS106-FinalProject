@@ -1,16 +1,19 @@
 import flet as ft
+import threading
+import time
 
 
 class VoterDashboard(ft.Column):
     """Voter Dashboard - Main dashboard for voters to view candidates and vote"""
     
-    def __init__(self, username, db, on_logout, on_profile_view=None, on_compare=None):
+    def __init__(self, username, db, on_logout, on_profile_view=None, on_compare=None, on_voting_started=None):
         super().__init__()
         self.username = username
         self.db = db
         self.on_logout = on_logout
         self.on_profile_view = on_profile_view
         self.on_compare = on_compare
+        self.on_voting_started = on_voting_started
         self.search_query = ""
         self.selected_for_compare = None  # Single candidate selected for comparison {"id": x, "position": y}
         self.compare_mode = False  # When true, filter to same position only
@@ -24,8 +27,16 @@ class VoterDashboard(ft.Column):
         # Get voting status
         self.voting_active = self._get_voting_status()
         
+        # Polling for voting status changes
+        self._polling_active = True
+        self._polling_thread = None
+        
         # Build UI
         self._build_ui()
+        
+        # Start polling for voting status if not already active
+        if not self.voting_active:
+            self._start_voting_poll()
     
     def _get_voting_status(self):
         """Get current voting status from database"""
@@ -551,3 +562,31 @@ class VoterDashboard(ft.Column):
         
         if self.page:
             self.page.update()
+    
+    def _start_voting_poll(self):
+        """Start background polling to check when voting becomes active"""
+        def poll_voting_status():
+            while self._polling_active:
+                time.sleep(2)  # Check every 2 seconds
+                if not self._polling_active:
+                    break
+                
+                try:
+                    new_status = self._get_voting_status()
+                    if new_status and not self.voting_active:
+                        # Voting just started!
+                        self._polling_active = False
+                        self.voting_active = True
+                        if self.on_voting_started and self.page:
+                            # Schedule callback on the main thread
+                            self.page.run_task(self.on_voting_started)
+                        break
+                except Exception:
+                    pass  # Ignore errors during polling
+        
+        self._polling_thread = threading.Thread(target=poll_voting_status, daemon=True)
+        self._polling_thread.start()
+    
+    def stop_polling(self):
+        """Stop the voting status polling"""
+        self._polling_active = False
