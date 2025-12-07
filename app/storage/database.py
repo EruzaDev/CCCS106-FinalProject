@@ -288,6 +288,92 @@ class Database:
         ''', (session_token,))
         self.connection.commit()
     
+    # =====================
+    # User Activity Monitoring
+    # =====================
+    
+    def get_user_activity(self, user_id):
+        """Get comprehensive user activity data"""
+        # Get user basic info with last login
+        self.cursor.execute('''
+            SELECT id, username, email, role, status, created_at, last_login
+            FROM users WHERE id = ?
+        ''', (user_id,))
+        user = self.cursor.fetchone()
+        
+        if not user:
+            return None
+        
+        # Get failed login attempts in last 24 hours
+        failed_attempts = self.get_failed_attempts_count(user[2], minutes=1440)  # 24 hours
+        
+        # Get recent login history from audit logs
+        self.cursor.execute('''
+            SELECT action, created_at FROM audit_logs
+            WHERE user_id = ? AND action_type IN ('login', 'logout', 'login_failed')
+            ORDER BY created_at DESC LIMIT 10
+        ''', (user_id,))
+        login_history = self.cursor.fetchall()
+        
+        # Get active sessions count
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM user_sessions
+            WHERE user_id = ? AND is_active = 1
+        ''', (user_id,))
+        active_sessions = self.cursor.fetchone()[0]
+        
+        # Get total actions by this user
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM audit_logs WHERE user_id = ?
+        ''', (user_id,))
+        total_actions = self.cursor.fetchone()[0]
+        
+        return {
+            "id": user[0],
+            "username": user[1],
+            "email": user[2],
+            "role": user[3],
+            "status": user[4],
+            "created_at": user[5],
+            "last_login": user[6],
+            "failed_attempts_24h": failed_attempts,
+            "login_history": login_history,
+            "active_sessions": active_sessions,
+            "total_actions": total_actions,
+        }
+    
+    def get_all_user_activities(self, role_filter=None, limit=50):
+        """Get activity summary for all users (admin view)"""
+        query = '''
+            SELECT u.id, u.username, u.email, u.role, u.status, u.last_login,
+                   (SELECT COUNT(*) FROM audit_logs WHERE user_id = u.id) as action_count,
+                   (SELECT COUNT(*) FROM user_sessions WHERE user_id = u.id AND is_active = 1) as active_sessions
+            FROM users u
+            WHERE 1=1
+        '''
+        params = []
+        
+        if role_filter:
+            query += " AND u.role = ?"
+            params.append(role_filter)
+        
+        query += " ORDER BY u.last_login DESC NULLS LAST LIMIT ?"
+        params.append(limit)
+        
+        self.cursor.execute(query, params)
+        results = self.cursor.fetchall()
+        
+        return [{
+            "id": r[0],
+            "username": r[1],
+            "email": r[2],
+            "role": r[3],
+            "status": r[4],
+            "last_login": r[5],
+            "action_count": r[6],
+            "active_sessions": r[7],
+        } for r in results]
+    
     def cast_vote(self, voter_id, candidate_id, position, election_session_id=None):
         """Record a vote"""
         try:
@@ -822,8 +908,9 @@ class Database:
             print(f"Error logging action: {e}")
             return None
     
-    def get_audit_logs(self, limit=100, offset=0, action_type=None, user_role=None):
-        """Get audit logs with optional filtering"""
+    def get_audit_logs(self, limit=100, offset=0, action_type=None, user_role=None, 
+                       date_from=None, date_to=None):
+        """Get audit logs with optional filtering including date range"""
         query = '''
             SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
                    al.user_role, al.target_type, al.target_id, al.details, 
@@ -841,6 +928,14 @@ class Database:
         if user_role:
             query += " AND al.user_role = ?"
             params.append(user_role)
+        
+        if date_from:
+            query += " AND al.created_at >= ?"
+            params.append(date_from)
+        
+        if date_to:
+            query += " AND al.created_at <= ?"
+            params.append(date_to)
         
         query += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])

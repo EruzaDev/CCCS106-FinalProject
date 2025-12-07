@@ -1,5 +1,5 @@
 import flet as ft
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class AuditLogPage(ft.Column):
@@ -16,6 +16,7 @@ class AuditLogPage(ft.Column):
         # Search and filter state
         self.search_query = ""
         self.selected_filter = "all"
+        self.date_range = "all"  # all, today, week, month
         
         # UI references
         self.logs_container = None
@@ -228,12 +229,52 @@ class AuditLogPage(ft.Column):
             spacing=8,
         )
         
+        # Date range filter
+        date_options = [
+            ("all", "All Time"),
+            ("today", "Today"),
+            ("week", "This Week"),
+            ("month", "This Month"),
+        ]
+        
+        date_buttons = ft.Row(
+            [
+                ft.OutlinedButton(
+                    text=label,
+                    style=ft.ButtonStyle(
+                        bgcolor="#5C6BC0" if self.date_range == value else None,
+                        color=ft.Colors.WHITE if self.date_range == value else "#666666",
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                    on_click=lambda e, v=value: self._apply_date_range(v),
+                )
+                for value, label in date_options
+            ],
+            spacing=8,
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
                     ft.Row([self.search_field], expand=True),
                     ft.Container(height=12),
-                    filter_buttons,
+                    ft.Row(
+                        [
+                            ft.Text("Type:", size=12, color="#666666", weight=ft.FontWeight.W_500),
+                            filter_buttons,
+                        ],
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Container(height=8),
+                    ft.Row(
+                        [
+                            ft.Text("Date:", size=12, color="#666666", weight=ft.FontWeight.W_500),
+                            date_buttons,
+                        ],
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
                 ],
             ),
             bgcolor=ft.Colors.WHITE,
@@ -293,19 +334,54 @@ class AuditLogPage(ft.Column):
             padding=16,
         )
     
+    def _get_date_range_values(self):
+        """Get date_from and date_to based on selected date range"""
+        now = datetime.now()
+        
+        if self.date_range == "today":
+            date_from = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            return date_from.isoformat(), None
+        elif self.date_range == "week":
+            date_from = now - timedelta(days=7)
+            return date_from.isoformat(), None
+        elif self.date_range == "month":
+            date_from = now - timedelta(days=30)
+            return date_from.isoformat(), None
+        
+        return None, None  # All time
+    
     def _get_filtered_logs(self):
-        """Get logs based on current filters"""
+        """Get logs based on current filters including date range"""
         if not self.db:
             return []
+        
+        date_from, date_to = self._get_date_range_values()
         
         if self.search_query:
             logs = self.db.search_audit_logs(self.search_query, self.user_role)
         elif self.selected_filter == "all":
             logs = self.db.get_audit_logs_for_role(self.user_role)
         else:
-            logs = self.db.get_audit_logs(action_type=self.selected_filter)
+            logs = self.db.get_audit_logs(
+                action_type=self.selected_filter,
+                date_from=date_from,
+                date_to=date_to
+            )
+        
+        # Apply date filter for search and role-based queries too
+        if date_from and logs:
+            logs = [
+                log for log in logs 
+                if log[10] and log[10] >= date_from  # created_at is index 10
+            ]
         
         return logs
+    
+    def _apply_date_range(self, range_value):
+        """Apply date range filter"""
+        self.date_range = range_value
+        self._rebuild_filters()
+        self._update_logs()
     
     def _build_logs_list(self, logs):
         """Build the list of log entries"""
