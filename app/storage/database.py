@@ -651,12 +651,12 @@ class Database:
     
     def get_failed_attempts_count(self, identifier, minutes=15):
         """Get the number of failed login attempts in the last N minutes"""
-        self.cursor.execute('''
+        self.cursor.execute(f'''
             SELECT COUNT(*) FROM login_attempts
             WHERE identifier = ? 
             AND success = 0
-            AND attempt_time > datetime('now', '-' || ? || ' minutes')
-        ''', (identifier.lower(), minutes))
+            AND attempt_time > datetime('now', '-{int(minutes)} minutes')
+        ''', (identifier.lower(),))
         result = self.cursor.fetchone()
         return result[0] if result else 0
     
@@ -695,10 +695,10 @@ class Database:
     
     def cleanup_old_login_attempts(self, hours=24):
         """Clean up old login attempts (older than N hours)"""
-        self.cursor.execute('''
+        self.cursor.execute(f'''
             DELETE FROM login_attempts
-            WHERE attempt_time < datetime('now', '-' || ? || ' hours')
-        ''', (hours,))
+            WHERE attempt_time < datetime('now', '-{int(hours)} hours')
+        ''')
         self.connection.commit()
     
     # Legal Records Methods (NBI)
