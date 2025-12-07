@@ -14,6 +14,7 @@ from .voting_page import VotingPage
 from .politician_dashboard import PoliticianDashboard
 from .nbi_dashboard import NBIDashboard
 from .audit_log_page import AuditLogPage
+from .analytics_page import AnalyticsPage
 
 __all__ = [
     'LoginPage',
@@ -31,4 +32,5 @@ __all__ = [
     'PoliticianDashboard',
     'NBIDashboard',
     'AuditLogPage',
+    'AnalyticsPage',
 ]

@@ -4,7 +4,7 @@ import flet as ft
 class ComelecDashboard(ft.Column):
     """COMELEC Dashboard - Main dashboard for COMELEC administrators"""
     
-    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates, current_user_id=None, on_audit_log=None):
+    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates, current_user_id=None, on_audit_log=None, on_analytics=None):
         super().__init__()
         self.username = username
         self.db = db
@@ -14,6 +14,7 @@ class ComelecDashboard(ft.Column):
         self.on_candidates = on_candidates
         self.current_user_id = current_user_id
         self.on_audit_log = on_audit_log
+        self.on_analytics = on_analytics
         
         # Dialog reference
         self.edit_dialog = None
@@ -88,6 +89,12 @@ class ComelecDashboard(ft.Column):
                     ),
                     ft.Row(
                         [
+                            ft.IconButton(
+                                icon=ft.Icons.ANALYTICS,
+                                icon_color="#4CAF50",
+                                tooltip="Election Analytics",
+                                on_click=lambda e: self.on_analytics() if self.on_analytics else None,
+                            ),
                             ft.IconButton(
                                 icon=ft.Icons.HISTORY,
                                 icon_color="#5C6BC0",

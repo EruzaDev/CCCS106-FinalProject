@@ -20,6 +20,7 @@ from app.views.voting_page import VotingPage
 from app.views.politician_dashboard import PoliticianDashboard
 from app.views.nbi_dashboard import NBIDashboard
 from app.views.audit_log_page import AuditLogPage
+from app.views.analytics_page import AnalyticsPage
 from app.storage.database import init_demo_data
 from app.state.session_manager import SessionManager
 
@@ -202,6 +203,7 @@ class HonestBallotApp:
             on_candidates=lambda: self.show_error_dialog("Info", "Verified Candidates - Coming Soon"),
             current_user_id=self.current_session["user_id"],
             on_audit_log=self.show_audit_log,
+            on_analytics=self.show_analytics_page,
         )
         
         self.page.add(dashboard)
@@ -254,6 +256,25 @@ class HonestBallotApp:
         )
         
         self.page.add(audit_page)
+        self.page.update()
+    
+    def show_analytics_page(self):
+        """Show the Analytics Dashboard page"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        analytics_page = AnalyticsPage(
+            username=self.current_session["username"],
+            db=self.db,
+            user_role=self.current_session["role"],
+            on_back=self.show_comelec_dashboard,
+            on_logout=self.handle_logout,
+        )
+        
+        self.page.add(analytics_page)
         self.page.update()
     
     def show_election_results(self):
