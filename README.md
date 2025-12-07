@@ -81,16 +81,16 @@ CCCS106-FinalProject/
 ## 📋 Development Roadmap
 
 ### Phase 1: Foundation (Current)
-- [ ] Project setup and architecture
-- [ ] Authentication pages (login/signup)
-- [ ] User role management
-- [ ] Basic UI components
+- [x] Project setup and architecture
+- [x] Authentication pages (login/signup)
+- [x] User role management
+- [x] Basic UI components
 
 ### Phase 2: Core Features
-- [ ] Candidate management
-- [ ] Voting interface
-- [ ] Vote submission and validation
-- [ ] Real-time vote counting
+- [x] Candidate management
+- [x] Voting interface
+- [x] Vote submission and validation
+- [x] Real-time vote counting
 
 ### Phase 3: Results & Admin
 - [ ] Results dashboard
