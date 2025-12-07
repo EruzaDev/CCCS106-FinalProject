@@ -2,6 +2,7 @@ import sqlite3
 import os
 import bcrypt
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,9 @@ except ImportError:
 class Database:
     """Local SQLite database manager for the voting application"""
     
+    # Class-level lock shared across all instances for thread safety
+    _db_lock = threading.RLock()
+    
     def __init__(self, db_name=None):
         """Initialize database connection"""
         # Use config if available, otherwise use default
@@ -25,6 +29,12 @@ class Database:
         self.connection = None
         self.cursor = None
         self.initialize_db()
+    
+    def _get_cursor(self):
+        """Get the cursor, creating a new one if needed. Use within _db_lock context."""
+        if self.cursor is None:
+            self.cursor = self.connection.cursor()
+        return self.cursor
     
     def initialize_db(self):
         """Initialize database and create tables if they don't exist"""
@@ -202,91 +212,97 @@ class Database:
     
     def create_user(self, username, email, password, role="voter"):
         """Create a new user"""
-        try:
-            password_hash = self.hash_password(password)
-            self.cursor.execute('''
-                INSERT INTO users (username, email, password_hash, role)
-                VALUES (?, ?, ?, ?)
-            ''', (username, email, password_hash, role))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
+        with Database._db_lock:
+            try:
+                password_hash = self.hash_password(password)
+                self.cursor.execute('''
+                    INSERT INTO users (username, email, password_hash, role)
+                    VALUES (?, ?, ?, ?)
+                ''', (username, email, password_hash, role))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
     
     def verify_user(self, email, password):
         """Verify user credentials using bcrypt"""
-        self.cursor.execute('''
-            SELECT id, username, email, role, password_hash FROM users
-            WHERE email = ?
-        ''', (email,))
-        
-        user = self.cursor.fetchone()
-        if user and self.verify_password(password, user[4]):
-            # Update last login
+        with Database._db_lock:
             self.cursor.execute('''
-                UPDATE users SET last_login = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (user[0],))
-            self.connection.commit()
-            return {
-                "id": user[0],
-                "username": user[1],
-                "email": user[2],
-                "role": user[3]
-            }
-        return None
+                SELECT id, username, email, role, password_hash FROM users
+                WHERE email = ?
+            ''', (email,))
+        
+            user = self.cursor.fetchone()
+            if user and self.verify_password(password, user[4]):
+                # Update last login
+                self.cursor.execute('''
+                    UPDATE users SET last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (user[0],))
+                self.connection.commit()
+                return {
+                    "id": user[0],
+                    "username": user[1],
+                    "email": user[2],
+                    "role": user[3]
+                }
+            return None
     
     def get_user_by_email(self, email):
         """Get user by email"""
-        self.cursor.execute('''
-            SELECT id, username, email, role FROM users WHERE email = ?
-        ''', (email,))
-        user = self.cursor.fetchone()
-        if user:
-            return {
-                "id": user[0],
-                "username": user[1],
-                "email": user[2],
-                "role": user[3]
-            }
-        return None
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, username, email, role FROM users WHERE email = ?
+            ''', (email,))
+            user = self.cursor.fetchone()
+            if user:
+                return {
+                    "id": user[0],
+                    "username": user[1],
+                    "email": user[2],
+                    "role": user[3]
+                }
+            return None
     
     def create_user_session(self, user_id, session_token):
         """Create a new user session"""
-        try:
-            self.cursor.execute('''
-                INSERT INTO user_sessions (user_id, session_token)
-                VALUES (?, ?)
-            ''', (user_id, session_token))
-            self.connection.commit()
-            return session_token
-        except sqlite3.IntegrityError:
-            return None
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO user_sessions (user_id, session_token)
+                    VALUES (?, ?)
+                ''', (user_id, session_token))
+                self.connection.commit()
+                return session_token
+            except sqlite3.IntegrityError:
+                return None
     
     def verify_session(self, session_token):
         """Verify if session is active"""
-        self.cursor.execute('''
-            SELECT user_id FROM user_sessions
-            WHERE session_token = ? AND is_active = 1
-        ''', (session_token,))
-        result = self.cursor.fetchone()
-        if result:
-            # Update last activity
+        with Database._db_lock:
             self.cursor.execute('''
-                UPDATE user_sessions SET last_activity = CURRENT_TIMESTAMP
-                WHERE session_token = ?
+                SELECT user_id FROM user_sessions
+                WHERE session_token = ? AND is_active = 1
             ''', (session_token,))
-            self.connection.commit()
-            return result[0]
-        return None
+            result = self.cursor.fetchone()
+            if result:
+                # Update last activity
+                self.cursor.execute('''
+                    UPDATE user_sessions SET last_activity = CURRENT_TIMESTAMP
+                    WHERE session_token = ?
+                ''', (session_token,))
+                self.connection.commit()
+                return result[0]
+            return None
     
     def end_session(self, session_token):
         """End a user session"""
-        self.cursor.execute('''
-            UPDATE user_sessions SET is_active = 0
-            WHERE session_token = ?
-        ''', (session_token,))
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute('''
+                UPDATE user_sessions SET is_active = 0
+                WHERE session_token = ?
+            ''', (session_token,))
+            self.connection.commit()
     
     # =====================
     # User Activity Monitoring
@@ -294,428 +310,462 @@ class Database:
     
     def get_user_activity(self, user_id):
         """Get comprehensive user activity data"""
-        # Get user basic info with last login
-        self.cursor.execute('''
-            SELECT id, username, email, role, status, created_at, last_login
-            FROM users WHERE id = ?
-        ''', (user_id,))
-        user = self.cursor.fetchone()
-        
-        if not user:
-            return None
-        
-        # Get failed login attempts in last 24 hours
-        failed_attempts = self.get_failed_attempts_count(user[2], minutes=1440)  # 24 hours
-        
-        # Get recent login history from audit logs
-        self.cursor.execute('''
-            SELECT action, created_at FROM audit_logs
-            WHERE user_id = ? AND action_type IN ('login', 'logout', 'login_failed')
-            ORDER BY created_at DESC LIMIT 10
-        ''', (user_id,))
-        login_history = self.cursor.fetchall()
-        
-        # Get active sessions count
-        self.cursor.execute('''
-            SELECT COUNT(*) FROM user_sessions
-            WHERE user_id = ? AND is_active = 1
-        ''', (user_id,))
-        active_sessions = self.cursor.fetchone()[0]
-        
-        # Get total actions by this user
-        self.cursor.execute('''
-            SELECT COUNT(*) FROM audit_logs WHERE user_id = ?
-        ''', (user_id,))
-        total_actions = self.cursor.fetchone()[0]
-        
-        return {
-            "id": user[0],
-            "username": user[1],
-            "email": user[2],
-            "role": user[3],
-            "status": user[4],
-            "created_at": user[5],
-            "last_login": user[6],
-            "failed_attempts_24h": failed_attempts,
-            "login_history": login_history,
-            "active_sessions": active_sessions,
-            "total_actions": total_actions,
-        }
-    
-    def get_all_user_activities(self, role_filter=None, limit=50):
-        """Get activity summary for all users (admin view)"""
-        query = '''
-            SELECT u.id, u.username, u.email, u.role, u.status, u.last_login,
-                   (SELECT COUNT(*) FROM audit_logs WHERE user_id = u.id) as action_count,
-                   (SELECT COUNT(*) FROM user_sessions WHERE user_id = u.id AND is_active = 1) as active_sessions
-            FROM users u
-            WHERE 1=1
-        '''
-        params = []
-        
-        if role_filter:
-            query += " AND u.role = ?"
-            params.append(role_filter)
-        
-        query += " ORDER BY u.last_login DESC NULLS LAST LIMIT ?"
-        params.append(limit)
-        
-        self.cursor.execute(query, params)
-        results = self.cursor.fetchall()
-        
-        return [{
-            "id": r[0],
-            "username": r[1],
-            "email": r[2],
-            "role": r[3],
-            "status": r[4],
-            "last_login": r[5],
-            "action_count": r[6],
-            "active_sessions": r[7],
-        } for r in results]
-    
-    def cast_vote(self, voter_id, candidate_id, position, election_session_id=None):
-        """Record a vote"""
-        try:
+        with Database._db_lock:
+            # Get user basic info with last login
             self.cursor.execute('''
-                INSERT INTO votes (voter_id, candidate_id, position, election_session_id)
-                VALUES (?, ?, ?, ?)
-            ''', (voter_id, candidate_id, position, election_session_id))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            # User already voted for this position
-            return False
-    
-    def update_vote(self, voter_id, candidate_id, position):
-        """Update an existing vote for a position"""
-        try:
-            self.cursor.execute('''
-                UPDATE votes 
-                SET candidate_id = ?, voted_at = CURRENT_TIMESTAMP
-                WHERE voter_id = ? AND position = ?
-            ''', (candidate_id, voter_id, position))
-            self.connection.commit()
-            return self.cursor.rowcount > 0
-        except Exception as e:
-            print(f"Error updating vote: {e}")
-            return False
-    
-    def get_votes_by_position(self, position, election_session_id=None):
-        """Get vote counts by position"""
-        if election_session_id:
-            self.cursor.execute('''
-                SELECT candidate_id, COUNT(*) as count
-                FROM votes
-                WHERE position = ? AND election_session_id = ?
-                GROUP BY candidate_id
-                ORDER BY count DESC
-            ''', (position, election_session_id))
-        else:
-            self.cursor.execute('''
-                SELECT candidate_id, COUNT(*) as count
-                FROM votes
-                WHERE position = ?
-                GROUP BY candidate_id
-                ORDER BY count DESC
-            ''', (position,))
-        return self.cursor.fetchall()
-    
-    def get_votes_by_voter(self, voter_id):
-        """Get all votes cast by a specific voter"""
-        self.cursor.execute('''
-            SELECT position, candidate_id FROM votes
-            WHERE voter_id = ?
-        ''', (voter_id,))
-        return self.cursor.fetchall()
-    
-    def has_voted_for_position(self, voter_id, position):
-        """Check if voter has already voted for a position"""
-        self.cursor.execute('''
-            SELECT COUNT(*) FROM votes
-            WHERE voter_id = ? AND position = ?
-        ''', (voter_id, position))
-        result = self.cursor.fetchone()
-        return result[0] > 0 if result else False
-    
-    def get_candidates_by_position(self, position):
-        """Get all candidates for a position"""
-        self.cursor.execute('''
-            SELECT id, name, position, party, bio FROM candidates
-            WHERE position = ?
-        ''', (position,))
-        return self.cursor.fetchall()
-    
-    def add_candidate(self, name, position, party, bio=""):
-        """Add a new candidate"""
-        self.cursor.execute('''
-            INSERT INTO candidates (name, position, party, bio)
-            VALUES (?, ?, ?, ?)
-        ''', (name, position, party, bio))
-        self.connection.commit()
-        return self.cursor.lastrowid
-    
-    def create_election_session(self, name):
-        """Create an election session"""
-        self.cursor.execute('''
-            INSERT INTO election_sessions (name, is_active)
-            VALUES (?, 1)
-        ''', (name,))
-        self.connection.commit()
-        return self.cursor.lastrowid
-    
-    def get_all_users(self):
-        """Get all users (for admin purposes)"""
-        self.cursor.execute('''
-            SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image FROM users
-        ''')
-        return self.cursor.fetchall()
-    
-    def get_users_by_role(self, role):
-        """Get all users by role"""
-        self.cursor.execute('''
-            SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image 
-            FROM users WHERE role = ?
-        ''', (role,))
-        return self.cursor.fetchall()
-    
-    def create_voter(self, username, email, password, full_name):
-        """Create a new voter account"""
-        try:
-            password_hash = self.hash_password(password)
-            self.cursor.execute('''
-                INSERT INTO users (username, email, password_hash, full_name, role, status)
-                VALUES (?, ?, ?, ?, 'voter', 'active')
-            ''', (username, email, password_hash, full_name))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def create_politician(self, username, email, password, full_name, position, party, biography, profile_image=None):
-        """Create a new politician account"""
-        try:
-            password_hash = self.hash_password(password)
-            self.cursor.execute('''
-                INSERT INTO users (username, email, password_hash, full_name, role, status, position, party, biography, profile_image)
-                VALUES (?, ?, ?, ?, 'politician', 'active', ?, ?, ?, ?)
-            ''', (username, email, password_hash, full_name, position, party, biography, profile_image))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def update_user_status(self, user_id, status):
-        """Update user status (active/inactive)"""
-        self.cursor.execute('''
-            UPDATE users SET status = ? WHERE id = ?
-        ''', (status, user_id))
-        self.connection.commit()
-    
-    def update_voter(self, user_id, full_name, email, username):
-        """Update voter account without changing password"""
-        try:
-            self.cursor.execute('''
-                UPDATE users SET full_name = ?, email = ?, username = ? WHERE id = ?
-            ''', (full_name, email, username, user_id))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def update_voter_with_password(self, user_id, full_name, email, username, password):
-        """Update voter account with new password"""
-        try:
-            password_hash = self.hash_password(password)
-            self.cursor.execute('''
-                UPDATE users SET full_name = ?, email = ?, username = ?, password_hash = ? WHERE id = ?
-            ''', (full_name, email, username, password_hash, user_id))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def update_politician(self, user_id, full_name, email, username, position, party, biography, profile_image=None):
-        """Update politician account without changing password"""
-        try:
-            if profile_image:
-                self.cursor.execute('''
-                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, profile_image = ? WHERE id = ?
-                ''', (full_name, email, username, position, party, biography, profile_image, user_id))
-            else:
-                self.cursor.execute('''
-                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ? WHERE id = ?
-                ''', (full_name, email, username, position, party, biography, user_id))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def update_politician_with_password(self, user_id, full_name, email, username, position, party, biography, password, profile_image=None):
-        """Update politician account with new password"""
-        try:
-            password_hash = self.hash_password(password)
-            if profile_image:
-                self.cursor.execute('''
-                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ?, profile_image = ? WHERE id = ?
-                ''', (full_name, email, username, position, party, biography, password_hash, profile_image, user_id))
-            else:
-                self.cursor.execute('''
-                    UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ? WHERE id = ?
-                ''', (full_name, email, username, position, party, biography, password_hash, user_id))
-            self.connection.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-    
-    def delete_user(self, user_id):
-        """Delete a user"""
-        self.cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
-        self.connection.commit()
-        return self.cursor.fetchall()
-    
-    # Achievement Verification Methods
-    def create_achievement_verification(self, politician_id, title, description, evidence_url=None):
-        """Create a new achievement verification request"""
-        try:
-            self.cursor.execute('''
-                INSERT INTO achievement_verifications (politician_id, achievement_title, achievement_description, evidence_url)
-                VALUES (?, ?, ?, ?)
-            ''', (politician_id, title, description, evidence_url))
-            self.connection.commit()
-            return self.cursor.lastrowid
-        except sqlite3.IntegrityError:
-            return None
-    
-    def get_pending_verifications(self):
-        """Get all pending achievement verifications"""
-        self.cursor.execute('''
-            SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
-                   av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
-            FROM achievement_verifications av
-            JOIN users u ON av.politician_id = u.id
-            WHERE av.status = 'pending'
-            ORDER BY av.created_at DESC
-        ''')
-        return self.cursor.fetchall()
-    
-    def get_all_verifications(self):
-        """Get all achievement verifications"""
-        self.cursor.execute('''
-            SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
-                   av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
-            FROM achievement_verifications av
-            JOIN users u ON av.politician_id = u.id
-            ORDER BY av.created_at DESC
-        ''')
-        return self.cursor.fetchall()
-    
-    def verify_achievement(self, verification_id, verified_by_id, status='verified'):
-        """Verify or reject an achievement"""
-        self.cursor.execute('''
-            UPDATE achievement_verifications 
-            SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (status, verified_by_id, verification_id))
-        self.connection.commit()
-    
-    def get_verifications_by_politician(self, politician_id):
-        """Get all verifications for a specific politician"""
-        self.cursor.execute('''
-            SELECT id, achievement_title, achievement_description, evidence_url, status, created_at
-            FROM achievement_verifications
-            WHERE politician_id = ?
-            ORDER BY created_at DESC
-        ''', (politician_id,))
-        return self.cursor.fetchall()
-    
-    # Voting Status Methods
-    def get_voting_status(self):
-        """Get current voting status"""
-        self.cursor.execute('SELECT is_active, started_at, ended_at FROM voting_status ORDER BY id DESC LIMIT 1')
-        result = self.cursor.fetchone()
-        if result:
-            return {"is_active": bool(result[0]), "started_at": result[1], "ended_at": result[2]}
-        return {"is_active": False, "started_at": None, "ended_at": None}
-    
-    def start_voting(self, user_id):
-        """Start voting session"""
-        self.cursor.execute('''
-            INSERT INTO voting_status (is_active, started_at, updated_by)
-            VALUES (1, CURRENT_TIMESTAMP, ?)
-        ''', (user_id,))
-        self.connection.commit()
-        return True
-    
-    def stop_voting(self, user_id):
-        """Stop voting session"""
-        self.cursor.execute('''
-            UPDATE voting_status SET is_active = 0, ended_at = CURRENT_TIMESTAMP, updated_by = ?
-            WHERE id = (SELECT MAX(id) FROM voting_status)
-        ''', (user_id,))
-        self.connection.commit()
-        return True
-    
-    # Election Results Methods
-    def get_election_results(self):
-        """Get election results grouped by position"""
-        self.cursor.execute('''
-            SELECT u.id, u.full_name, u.username, u.position, u.party, u.profile_image,
-                   COUNT(v.id) as vote_count
-            FROM users u
-            LEFT JOIN votes v ON u.id = v.candidate_id
-            WHERE u.role = 'politician'
-            GROUP BY u.id
-            ORDER BY u.position, vote_count DESC
-        ''')
-        return self.cursor.fetchall()
-    
-    def get_total_votes_cast(self):
-        """Get total number of votes cast"""
-        self.cursor.execute('SELECT COUNT(*) FROM votes')
-        result = self.cursor.fetchone()
-        return result[0] if result else 0
-    
-    def get_unique_voters_count(self):
-        """Get count of unique voters who have voted"""
-        self.cursor.execute('SELECT COUNT(DISTINCT voter_id) FROM votes')
-        result = self.cursor.fetchone()
-        return result[0] if result else 0
-    
-    def get_positions_count(self):
-        """Get count of unique positions being voted on"""
-        self.cursor.execute('SELECT COUNT(DISTINCT position) FROM users WHERE role = "politician"')
-        result = self.cursor.fetchone()
-        return result[0] if result else 0
-    
-    def get_votes_by_candidate(self, candidate_id):
-        """Get vote count for a specific candidate"""
-        self.cursor.execute('SELECT COUNT(*) FROM votes WHERE candidate_id = ?', (candidate_id,))
-        result = self.cursor.fetchone()
-        return result[0] if result else 0
-    
-    def verify_user_by_username(self, username, password):
-        """Verify user credentials by username using bcrypt"""
-        self.cursor.execute('''
-            SELECT id, username, email, role, password_hash FROM users
-            WHERE username = ?
-        ''', (username,))
+                SELECT id, username, email, role, status, created_at, last_login
+                FROM users WHERE id = ?
+            ''', (user_id,))
+            user = self.cursor.fetchone()
         
-        user = self.cursor.fetchone()
-        if user and self.verify_password(password, user[4]):
-            # Update last login
+            if not user:
+                return None
+        
+            # Get failed login attempts in last 24 hours
+            failed_attempts = self.get_failed_attempts_count(user[2], minutes=1440)  # 24 hours
+        
+            # Get recent login history from audit logs
             self.cursor.execute('''
-                UPDATE users SET last_login = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (user[0],))
-            self.connection.commit()
+                SELECT action, created_at FROM audit_logs
+                WHERE user_id = ? AND action_type IN ('login', 'logout', 'login_failed')
+                ORDER BY created_at DESC LIMIT 10
+            ''', (user_id,))
+            login_history = self.cursor.fetchall()
+        
+            # Get active sessions count
+            self.cursor.execute('''
+                SELECT COUNT(*) FROM user_sessions
+                WHERE user_id = ? AND is_active = 1
+            ''', (user_id,))
+            active_sessions = self.cursor.fetchone()[0]
+        
+            # Get total actions by this user
+            self.cursor.execute('''
+                SELECT COUNT(*) FROM audit_logs WHERE user_id = ?
+            ''', (user_id,))
+            total_actions = self.cursor.fetchone()[0]
+        
             return {
                 "id": user[0],
                 "username": user[1],
                 "email": user[2],
-                "role": user[3]
+                "role": user[3],
+                "status": user[4],
+                "created_at": user[5],
+                "last_login": user[6],
+                "failed_attempts_24h": failed_attempts,
+                "login_history": login_history,
+                "active_sessions": active_sessions,
+                "total_actions": total_actions,
             }
-        return None
+    
+    def get_all_user_activities(self, role_filter=None, limit=50):
+        """Get activity summary for all users (admin view)"""
+        with Database._db_lock:
+            query = '''
+                SELECT u.id, u.username, u.email, u.role, u.status, u.last_login,
+                       (SELECT COUNT(*) FROM audit_logs WHERE user_id = u.id) as action_count,
+                       (SELECT COUNT(*) FROM user_sessions WHERE user_id = u.id AND is_active = 1) as active_sessions
+                FROM users u
+                WHERE 1=1
+            '''
+            params = []
+        
+            if role_filter:
+                query += " AND u.role = ?"
+                params.append(role_filter)
+        
+            query += " ORDER BY u.last_login DESC NULLS LAST LIMIT ?"
+            params.append(limit)
+        
+            self.cursor.execute(query, params)
+            results = self.cursor.fetchall()
+        
+            return [{
+                "id": r[0],
+                "username": r[1],
+                "email": r[2],
+                "role": r[3],
+                "status": r[4],
+                "last_login": r[5],
+                "action_count": r[6],
+                "active_sessions": r[7],
+            } for r in results]
+    
+    def cast_vote(self, voter_id, candidate_id, position, election_session_id=None):
+        """Record a vote"""
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO votes (voter_id, candidate_id, position, election_session_id)
+                    VALUES (?, ?, ?, ?)
+                ''', (voter_id, candidate_id, position, election_session_id))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                # User already voted for this position
+                return False
+    
+    def update_vote(self, voter_id, candidate_id, position):
+        """Update an existing vote for a position"""
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    UPDATE votes 
+                    SET candidate_id = ?, voted_at = CURRENT_TIMESTAMP
+                    WHERE voter_id = ? AND position = ?
+                ''', (candidate_id, voter_id, position))
+                self.connection.commit()
+                return self.cursor.rowcount > 0
+            except Exception as e:
+                print(f"Error updating vote: {e}")
+                return False
+    
+    def get_votes_by_position(self, position, election_session_id=None):
+        """Get vote counts by position"""
+        with Database._db_lock:
+            if election_session_id:
+                self.cursor.execute('''
+                    SELECT candidate_id, COUNT(*) as count
+                    FROM votes
+                    WHERE position = ? AND election_session_id = ?
+                    GROUP BY candidate_id
+                    ORDER BY count DESC
+                ''', (position, election_session_id))
+            else:
+                self.cursor.execute('''
+                    SELECT candidate_id, COUNT(*) as count
+                    FROM votes
+                    WHERE position = ?
+                    GROUP BY candidate_id
+                    ORDER BY count DESC
+                ''', (position,))
+            return self.cursor.fetchall()
+    
+    def get_votes_by_voter(self, voter_id):
+        """Get all votes cast by a specific voter"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT position, candidate_id FROM votes
+                WHERE voter_id = ?
+            ''', (voter_id,))
+            return self.cursor.fetchall()
+    
+    def has_voted_for_position(self, voter_id, position):
+        """Check if voter has already voted for a position"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT COUNT(*) FROM votes
+                WHERE voter_id = ? AND position = ?
+            ''', (voter_id, position))
+            result = self.cursor.fetchone()
+            return result[0] > 0 if result else False
+    
+    def get_candidates_by_position(self, position):
+        """Get all candidates for a position"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, name, position, party, bio FROM candidates
+                WHERE position = ?
+            ''', (position,))
+            return self.cursor.fetchall()
+    
+    def add_candidate(self, name, position, party, bio=""):
+        """Add a new candidate"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                INSERT INTO candidates (name, position, party, bio)
+                VALUES (?, ?, ?, ?)
+            ''', (name, position, party, bio))
+            self.connection.commit()
+            return self.cursor.lastrowid
+    
+    def create_election_session(self, name):
+        """Create an election session"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                INSERT INTO election_sessions (name, is_active)
+                VALUES (?, 1)
+            ''', (name,))
+            self.connection.commit()
+            return self.cursor.lastrowid
+    
+    def get_all_users(self):
+        """Get all users (for admin purposes)"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image FROM users
+            ''')
+            return self.cursor.fetchall()
+    
+    def get_users_by_role(self, role):
+        """Get all users by role"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, username, email, role, created_at, full_name, status, position, party, biography, profile_image 
+                FROM users WHERE role = ?
+            ''', (role,))
+            return self.cursor.fetchall()
+    
+    def create_voter(self, username, email, password, full_name):
+        """Create a new voter account"""
+        with Database._db_lock:
+            try:
+                password_hash = self.hash_password(password)
+                self.cursor.execute('''
+                    INSERT INTO users (username, email, password_hash, full_name, role, status)
+                    VALUES (?, ?, ?, ?, 'voter', 'active')
+                ''', (username, email, password_hash, full_name))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def create_politician(self, username, email, password, full_name, position, party, biography, profile_image=None):
+        """Create a new politician account"""
+        with Database._db_lock:
+            try:
+                password_hash = self.hash_password(password)
+                self.cursor.execute('''
+                    INSERT INTO users (username, email, password_hash, full_name, role, status, position, party, biography, profile_image)
+                    VALUES (?, ?, ?, ?, 'politician', 'active', ?, ?, ?, ?)
+                ''', (username, email, password_hash, full_name, position, party, biography, profile_image))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def update_user_status(self, user_id, status):
+        """Update user status (active/inactive)"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                UPDATE users SET status = ? WHERE id = ?
+            ''', (status, user_id))
+            self.connection.commit()
+    
+    def update_voter(self, user_id, full_name, email, username):
+        """Update voter account without changing password"""
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ? WHERE id = ?
+                ''', (full_name, email, username, user_id))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def update_voter_with_password(self, user_id, full_name, email, username, password):
+        """Update voter account with new password"""
+        with Database._db_lock:
+            try:
+                password_hash = self.hash_password(password)
+                self.cursor.execute('''
+                    UPDATE users SET full_name = ?, email = ?, username = ?, password_hash = ? WHERE id = ?
+                ''', (full_name, email, username, password_hash, user_id))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def update_politician(self, user_id, full_name, email, username, position, party, biography, profile_image=None):
+        """Update politician account without changing password"""
+        with Database._db_lock:
+            try:
+                if profile_image:
+                    self.cursor.execute('''
+                        UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, profile_image = ? WHERE id = ?
+                    ''', (full_name, email, username, position, party, biography, profile_image, user_id))
+                else:
+                    self.cursor.execute('''
+                        UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ? WHERE id = ?
+                    ''', (full_name, email, username, position, party, biography, user_id))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def update_politician_with_password(self, user_id, full_name, email, username, position, party, biography, password, profile_image=None):
+        """Update politician account with new password"""
+        with Database._db_lock:
+            try:
+                password_hash = self.hash_password(password)
+                if profile_image:
+                    self.cursor.execute('''
+                        UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ?, profile_image = ? WHERE id = ?
+                    ''', (full_name, email, username, position, party, biography, password_hash, profile_image, user_id))
+                else:
+                    self.cursor.execute('''
+                        UPDATE users SET full_name = ?, email = ?, username = ?, position = ?, party = ?, biography = ?, password_hash = ? WHERE id = ?
+                    ''', (full_name, email, username, position, party, biography, password_hash, user_id))
+                self.connection.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
+    
+    def delete_user(self, user_id):
+        """Delete a user"""
+        with Database._db_lock:
+            self.cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            self.connection.commit()
+            return self.cursor.fetchall()
+    
+    # Achievement Verification Methods
+    def create_achievement_verification(self, politician_id, title, description, evidence_url=None):
+        """Create a new achievement verification request"""
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO achievement_verifications (politician_id, achievement_title, achievement_description, evidence_url)
+                    VALUES (?, ?, ?, ?)
+                ''', (politician_id, title, description, evidence_url))
+                self.connection.commit()
+                return self.cursor.lastrowid
+            except sqlite3.IntegrityError:
+                return None
+    
+    def get_pending_verifications(self):
+        """Get all pending achievement verifications"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
+                       av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
+                FROM achievement_verifications av
+                JOIN users u ON av.politician_id = u.id
+                WHERE av.status = 'pending'
+                ORDER BY av.created_at DESC
+            ''')
+            return self.cursor.fetchall()
+    
+    def get_all_verifications(self):
+        """Get all achievement verifications"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT av.id, av.politician_id, av.achievement_title, av.achievement_description, 
+                       av.evidence_url, av.status, av.created_at, u.full_name, u.username, u.position
+                FROM achievement_verifications av
+                JOIN users u ON av.politician_id = u.id
+                ORDER BY av.created_at DESC
+            ''')
+            return self.cursor.fetchall()
+    
+    def verify_achievement(self, verification_id, verified_by_id, status='verified'):
+        """Verify or reject an achievement"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                UPDATE achievement_verifications 
+                SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (status, verified_by_id, verification_id))
+            self.connection.commit()
+    
+    def get_verifications_by_politician(self, politician_id):
+        """Get all verifications for a specific politician"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, achievement_title, achievement_description, evidence_url, status, created_at
+                FROM achievement_verifications
+                WHERE politician_id = ?
+                ORDER BY created_at DESC
+            ''', (politician_id,))
+            return self.cursor.fetchall()
+    
+    # Voting Status Methods
+    def get_voting_status(self):
+        """Get current voting status"""
+        with Database._db_lock:
+            self.cursor.execute('SELECT is_active, started_at, ended_at FROM voting_status ORDER BY id DESC LIMIT 1')
+            result = self.cursor.fetchone()
+            if result:
+                return {"is_active": bool(result[0]), "started_at": result[1], "ended_at": result[2]}
+            return {"is_active": False, "started_at": None, "ended_at": None}
+    
+    def start_voting(self, user_id):
+        """Start voting session"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                INSERT INTO voting_status (is_active, started_at, updated_by)
+                VALUES (1, CURRENT_TIMESTAMP, ?)
+            ''', (user_id,))
+            self.connection.commit()
+            return True
+    
+    def stop_voting(self, user_id):
+        """Stop voting session"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                UPDATE voting_status SET is_active = 0, ended_at = CURRENT_TIMESTAMP, updated_by = ?
+                WHERE id = (SELECT MAX(id) FROM voting_status)
+            ''', (user_id,))
+            self.connection.commit()
+            return True
+    
+    # Election Results Methods
+    def get_election_results(self):
+        """Get election results grouped by position"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT u.id, u.full_name, u.username, u.position, u.party, u.profile_image,
+                       COUNT(v.id) as vote_count
+                FROM users u
+                LEFT JOIN votes v ON u.id = v.candidate_id
+                WHERE u.role = 'politician'
+                GROUP BY u.id
+                ORDER BY u.position, vote_count DESC
+            ''')
+            return self.cursor.fetchall()
+    
+    def get_total_votes_cast(self):
+        """Get total number of votes cast"""
+        with Database._db_lock:
+            self.cursor.execute('SELECT COUNT(*) FROM votes')
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
+    
+    def get_unique_voters_count(self):
+        """Get count of unique voters who have voted"""
+        with Database._db_lock:
+            self.cursor.execute('SELECT COUNT(DISTINCT voter_id) FROM votes')
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
+    
+    def get_positions_count(self):
+        """Get count of unique positions being voted on"""
+        with Database._db_lock:
+            self.cursor.execute('SELECT COUNT(DISTINCT position) FROM users WHERE role = "politician"')
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
+    
+    def get_votes_by_candidate(self, candidate_id):
+        """Get vote count for a specific candidate"""
+        with Database._db_lock:
+            self.cursor.execute('SELECT COUNT(*) FROM votes WHERE candidate_id = ?', (candidate_id,))
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
+    
+    def verify_user_by_username(self, username, password):
+        """Verify user credentials by username using bcrypt"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, username, email, role, password_hash FROM users
+                WHERE username = ?
+            ''', (username,))
+        
+            user = self.cursor.fetchone()
+            if user and self.verify_password(password, user[4]):
+                # Update last login
+                self.cursor.execute('''
+                    UPDATE users SET last_login = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (user[0],))
+                self.connection.commit()
+                return {
+                    "id": user[0],
+                    "username": user[1],
+                    "email": user[2],
+                    "role": user[3]
+                }
+            return None
     
     # Credential Stuffing Protection Methods
     # Use config values if available, otherwise use defaults
@@ -729,22 +779,24 @@ class Database:
     
     def record_login_attempt(self, identifier, success=False, ip_address=None):
         """Record a login attempt for rate limiting"""
-        self.cursor.execute('''
-            INSERT INTO login_attempts (identifier, success, ip_address)
-            VALUES (?, ?, ?)
-        ''', (identifier.lower(), success, ip_address))
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute('''
+                INSERT INTO login_attempts (identifier, success, ip_address)
+                VALUES (?, ?, ?)
+            ''', (identifier.lower(), success, ip_address))
+            self.connection.commit()
     
     def get_failed_attempts_count(self, identifier, minutes=15):
         """Get the number of failed login attempts in the last N minutes"""
-        self.cursor.execute(f'''
-            SELECT COUNT(*) FROM login_attempts
-            WHERE identifier = ? 
-            AND success = 0
-            AND attempt_time > datetime('now', '-{int(minutes)} minutes')
-        ''', (identifier.lower(),))
-        result = self.cursor.fetchone()
-        return result[0] if result else 0
+        with Database._db_lock:
+            self.cursor.execute(f'''
+                SELECT COUNT(*) FROM login_attempts
+                WHERE identifier = ? 
+                AND success = 0
+                AND attempt_time > datetime('now', '-{int(minutes)} minutes')
+            ''', (identifier.lower(),))
+            result = self.cursor.fetchone()
+            return result[0] if result else 0
     
     def is_account_locked(self, identifier):
         """Check if account is locked due to too many failed attempts"""
@@ -756,136 +808,148 @@ class Database:
     
     def get_lockout_remaining_time(self, identifier):
         """Get remaining lockout time in seconds"""
-        self.cursor.execute('''
-            SELECT attempt_time FROM login_attempts
-            WHERE identifier = ? AND success = 0
-            ORDER BY attempt_time DESC
-            LIMIT 1
-        ''', (identifier.lower(),))
-        result = self.cursor.fetchone()
-        if result:
-            from datetime import timedelta
-            last_attempt = datetime.strptime(result[0], '%Y-%m-%d %H:%M:%S')
-            lockout_end = last_attempt + timedelta(minutes=self.LOCKOUT_DURATION_MINUTES)
-            remaining = (lockout_end - datetime.now()).total_seconds()
-            return max(0, int(remaining))
-        return 0
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT attempt_time FROM login_attempts
+                WHERE identifier = ? AND success = 0
+                ORDER BY attempt_time DESC
+                LIMIT 1
+            ''', (identifier.lower(),))
+            result = self.cursor.fetchone()
+            if result:
+                from datetime import timedelta
+                last_attempt = datetime.strptime(result[0], '%Y-%m-%d %H:%M:%S')
+                lockout_end = last_attempt + timedelta(minutes=self.LOCKOUT_DURATION_MINUTES)
+                remaining = (lockout_end - datetime.now()).total_seconds()
+                return max(0, int(remaining))
+            return 0
     
     def clear_failed_attempts(self, identifier):
         """Clear failed login attempts after successful login"""
-        self.cursor.execute('''
-            DELETE FROM login_attempts
-            WHERE identifier = ? AND success = 0
-        ''', (identifier.lower(),))
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute('''
+                DELETE FROM login_attempts
+                WHERE identifier = ? AND success = 0
+            ''', (identifier.lower(),))
+            self.connection.commit()
     
     def cleanup_old_login_attempts(self, hours=24):
         """Clean up old login attempts (older than N hours)"""
-        self.cursor.execute(f'''
-            DELETE FROM login_attempts
-            WHERE attempt_time < datetime('now', '-{int(hours)} hours')
-        ''')
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute(f'''
+                DELETE FROM login_attempts
+                WHERE attempt_time < datetime('now', '-{int(hours)} hours')
+            ''')
+            self.connection.commit()
     
     # Legal Records Methods (NBI)
     def create_legal_record(self, politician_id, record_type, title, description, date, added_by):
         """Create a new legal record for a politician"""
-        try:
-            self.cursor.execute('''
-                INSERT INTO legal_records (politician_id, record_type, title, description, record_date, status, added_by)
-                VALUES (?, ?, ?, ?, ?, 'pending', ?)
-            ''', (politician_id, record_type, title, description, date, added_by))
-            self.connection.commit()
-            return self.cursor.lastrowid
-        except sqlite3.IntegrityError:
-            return None
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO legal_records (politician_id, record_type, title, description, record_date, status, added_by)
+                    VALUES (?, ?, ?, ?, ?, 'pending', ?)
+                ''', (politician_id, record_type, title, description, date, added_by))
+                self.connection.commit()
+                return self.cursor.lastrowid
+            except sqlite3.IntegrityError:
+                return None
     
     def get_all_legal_records(self):
         """Get all legal records with politician info"""
-        self.cursor.execute('''
-            SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
-                   lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
-            FROM legal_records lr
-            JOIN users u ON lr.politician_id = u.id
-            ORDER BY lr.created_at DESC
-        ''')
-        return self.cursor.fetchall()
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
+                       lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
+                FROM legal_records lr
+                JOIN users u ON lr.politician_id = u.id
+                ORDER BY lr.created_at DESC
+            ''')
+            return self.cursor.fetchall()
     
     def get_legal_records_by_politician(self, politician_id):
         """Get all legal records for a specific politician"""
-        self.cursor.execute('''
-            SELECT id, record_type, title, description, record_date, status, created_at
-            FROM legal_records
-            WHERE politician_id = ?
-            ORDER BY created_at DESC
-        ''', (politician_id,))
-        return self.cursor.fetchall()
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, record_type, title, description, record_date, status, created_at
+                FROM legal_records
+                WHERE politician_id = ?
+                ORDER BY created_at DESC
+            ''', (politician_id,))
+            return self.cursor.fetchall()
     
     def update_legal_record_status(self, record_id, status, verified_by):
         """Update the status of a legal record"""
-        self.cursor.execute('''
-            UPDATE legal_records 
-            SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (status, verified_by, record_id))
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute('''
+                UPDATE legal_records 
+                SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (status, verified_by, record_id))
+            self.connection.commit()
     
     def update_legal_record(self, record_id, record_type, title, description, date):
         """Update a legal record's details"""
-        try:
-            self.cursor.execute('''
-                UPDATE legal_records 
-                SET record_type = ?, title = ?, description = ?, record_date = ?
-                WHERE id = ?
-            ''', (record_type, title, description, date, record_id))
-            self.connection.commit()
-            return True
-        except Exception as e:
-            print(f"Error updating legal record: {e}")
-            return False
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    UPDATE legal_records 
+                    SET record_type = ?, title = ?, description = ?, record_date = ?
+                    WHERE id = ?
+                ''', (record_type, title, description, date, record_id))
+                self.connection.commit()
+                return True
+            except Exception as e:
+                print(f"Error updating legal record: {e}")
+                return False
     
     def get_legal_record_by_id(self, record_id):
         """Get a single legal record by ID"""
-        self.cursor.execute('''
-            SELECT id, politician_id, record_type, title, description, record_date, status
-            FROM legal_records
-            WHERE id = ?
-        ''', (record_id,))
-        return self.cursor.fetchone()
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, politician_id, record_type, title, description, record_date, status
+                FROM legal_records
+                WHERE id = ?
+            ''', (record_id,))
+            return self.cursor.fetchone()
     
     def delete_legal_record(self, record_id):
         """Delete a legal record"""
-        self.cursor.execute('DELETE FROM legal_records WHERE id = ?', (record_id,))
-        self.connection.commit()
+        with Database._db_lock:
+            self.cursor.execute('DELETE FROM legal_records WHERE id = ?', (record_id,))
+            self.connection.commit()
     
     def get_legal_records_stats(self):
         """Get statistics about legal records"""
-        # Total records
-        self.cursor.execute('SELECT COUNT(*) FROM legal_records')
-        total = self.cursor.fetchone()[0]
+        with Database._db_lock:
+            # Total records
+            self.cursor.execute('SELECT COUNT(*) FROM legal_records')
+            total = self.cursor.fetchone()[0]
         
-        # Verified records
-        self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'verified'")
-        verified = self.cursor.fetchone()[0]
+            # Verified records
+            self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'verified'")
+            verified = self.cursor.fetchone()[0]
         
-        # Pending records
-        self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'pending'")
-        pending = self.cursor.fetchone()[0]
+            # Pending records
+            self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'pending'")
+            pending = self.cursor.fetchone()[0]
         
-        return {"total": total, "verified": verified, "pending": pending}
+            return {"total": total, "verified": verified, "pending": pending}
     
     def search_legal_records(self, query):
         """Search legal records by politician name or record title"""
-        search_term = f"%{query}%"
-        self.cursor.execute('''
-            SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
-                   lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
-            FROM legal_records lr
-            JOIN users u ON lr.politician_id = u.id
-            WHERE u.full_name LIKE ? OR u.username LIKE ? OR lr.title LIKE ?
-            ORDER BY lr.created_at DESC
-        ''', (search_term, search_term, search_term))
-        return self.cursor.fetchall()
+        with Database._db_lock:
+            search_term = f"%{query}%"
+            self.cursor.execute('''
+                SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
+                       lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
+                FROM legal_records lr
+                JOIN users u ON lr.politician_id = u.id
+                WHERE u.full_name LIKE ? OR u.username LIKE ? OR lr.title LIKE ?
+                ORDER BY lr.created_at DESC
+            ''', (search_term, search_term, search_term))
+            return self.cursor.fetchall()
     
     # =====================
     # Audit Log Methods
@@ -894,142 +958,147 @@ class Database:
     def log_action(self, action, action_type, description=None, user_id=None, user_role=None, 
                    target_type=None, target_id=None, details=None, ip_address=None):
         """Log an action to the audit log"""
-        try:
-            details_json = json.dumps(details) if details else None
-            self.cursor.execute('''
-                INSERT INTO audit_logs (action, action_type, description, user_id, user_role, 
-                                       target_type, target_id, details, ip_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (action, action_type, description, user_id, user_role, 
-                  target_type, target_id, details_json, ip_address))
-            self.connection.commit()
-            return self.cursor.lastrowid
-        except Exception as e:
-            print(f"Error logging action: {e}")
-            return None
+        with Database._db_lock:
+            try:
+                details_json = json.dumps(details) if details else None
+                self.cursor.execute('''
+                    INSERT INTO audit_logs (action, action_type, description, user_id, user_role, 
+                                           target_type, target_id, details, ip_address)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (action, action_type, description, user_id, user_role, 
+                      target_type, target_id, details_json, ip_address))
+                self.connection.commit()
+                return self.cursor.lastrowid
+            except Exception as e:
+                print(f"Error logging action: {e}")
+                return None
     
     def get_audit_logs(self, limit=100, offset=0, action_type=None, user_role=None, 
                        date_from=None, date_to=None):
         """Get audit logs with optional filtering including date range"""
-        query = '''
-            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
-                   al.user_role, al.target_type, al.target_id, al.details, 
-                   al.ip_address, al.created_at, u.username, u.full_name
-            FROM audit_logs al
-            LEFT JOIN users u ON al.user_id = u.id
-            WHERE 1=1
-        '''
-        params = []
+        with Database._db_lock:
+            query = '''
+                SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                       al.user_role, al.target_type, al.target_id, al.details, 
+                       al.ip_address, al.created_at, u.username, u.full_name
+                FROM audit_logs al
+                LEFT JOIN users u ON al.user_id = u.id
+                WHERE 1=1
+            '''
+            params = []
         
-        if action_type:
-            query += " AND al.action_type = ?"
-            params.append(action_type)
+            if action_type:
+                query += " AND al.action_type = ?"
+                params.append(action_type)
         
-        if user_role:
-            query += " AND al.user_role = ?"
-            params.append(user_role)
+            if user_role:
+                query += " AND al.user_role = ?"
+                params.append(user_role)
         
-        if date_from:
-            query += " AND al.created_at >= ?"
-            params.append(date_from)
+            if date_from:
+                query += " AND al.created_at >= ?"
+                params.append(date_from)
         
-        if date_to:
-            query += " AND al.created_at <= ?"
-            params.append(date_to)
+            if date_to:
+                query += " AND al.created_at <= ?"
+                params.append(date_to)
         
-        query += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?"
-        params.extend([limit, offset])
+            query += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
         
-        self.cursor.execute(query, params)
-        return self.cursor.fetchall()
+            self.cursor.execute(query, params)
+            return self.cursor.fetchall()
     
     def get_audit_logs_for_role(self, viewer_role, limit=100, offset=0):
         """Get audit logs filtered by what a role is allowed to see"""
-        # Define what each role can see
-        role_permissions = {
-            'comelec': ['all'],  # COMELEC can see everything
-            'nbi': ['legal_record', 'login', 'logout'],  # NBI sees legal records and auth
-            'politician': ['verification', 'legal_record', 'vote_result'],  # Politicians see their related logs
-        }
+        with Database._db_lock:
+            # Define what each role can see
+            role_permissions = {
+                'comelec': ['all'],  # COMELEC can see everything
+                'nbi': ['legal_record', 'login', 'logout'],  # NBI sees legal records and auth
+                'politician': ['verification', 'legal_record', 'vote_result'],  # Politicians see their related logs
+            }
         
-        allowed_types = role_permissions.get(viewer_role, [])
+            allowed_types = role_permissions.get(viewer_role, [])
         
-        if 'all' in allowed_types:
-            return self.get_audit_logs(limit, offset)
+            if 'all' in allowed_types:
+                return self.get_audit_logs(limit, offset)
         
-        if not allowed_types:
-            return []
+            if not allowed_types:
+                return []
         
-        placeholders = ','.join(['?' for _ in allowed_types])
-        query = f'''
-            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
-                   al.user_role, al.target_type, al.target_id, al.details, 
-                   al.ip_address, al.created_at, u.username, u.full_name
-            FROM audit_logs al
-            LEFT JOIN users u ON al.user_id = u.id
-            WHERE al.action_type IN ({placeholders})
-            ORDER BY al.created_at DESC
-            LIMIT ? OFFSET ?
-        '''
-        params = allowed_types + [limit, offset]
-        self.cursor.execute(query, params)
-        return self.cursor.fetchall()
+            placeholders = ','.join(['?' for _ in allowed_types])
+            query = f'''
+                SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                       al.user_role, al.target_type, al.target_id, al.details, 
+                       al.ip_address, al.created_at, u.username, u.full_name
+                FROM audit_logs al
+                LEFT JOIN users u ON al.user_id = u.id
+                WHERE al.action_type IN ({placeholders})
+                ORDER BY al.created_at DESC
+                LIMIT ? OFFSET ?
+            '''
+            params = allowed_types + [limit, offset]
+            self.cursor.execute(query, params)
+            return self.cursor.fetchall()
     
     def get_audit_log_stats(self):
         """Get audit log statistics"""
-        stats = {}
+        with Database._db_lock:
+            stats = {}
         
-        # Total logs
-        self.cursor.execute("SELECT COUNT(*) FROM audit_logs")
-        stats['total'] = self.cursor.fetchone()[0]
+            # Total logs
+            self.cursor.execute("SELECT COUNT(*) FROM audit_logs")
+            stats['total'] = self.cursor.fetchone()[0]
         
-        # Logs by action type
-        self.cursor.execute('''
-            SELECT action_type, COUNT(*) FROM audit_logs 
-            GROUP BY action_type ORDER BY COUNT(*) DESC
-        ''')
-        stats['by_type'] = self.cursor.fetchall()
+            # Logs by action type
+            self.cursor.execute('''
+                SELECT action_type, COUNT(*) FROM audit_logs 
+                GROUP BY action_type ORDER BY COUNT(*) DESC
+            ''')
+            stats['by_type'] = self.cursor.fetchall()
         
-        # Logs today
-        self.cursor.execute('''
-            SELECT COUNT(*) FROM audit_logs 
-            WHERE DATE(created_at) = DATE('now')
-        ''')
-        stats['today'] = self.cursor.fetchone()[0]
+            # Logs today
+            self.cursor.execute('''
+                SELECT COUNT(*) FROM audit_logs 
+                WHERE DATE(created_at) = DATE('now')
+            ''')
+            stats['today'] = self.cursor.fetchone()[0]
         
-        return stats
+            return stats
     
     def search_audit_logs(self, query, viewer_role=None, limit=100):
         """Search audit logs by action, description, or username"""
-        search_term = f"%{query}%"
+        with Database._db_lock:
+            search_term = f"%{query}%"
         
-        base_query = '''
-            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
-                   al.user_role, al.target_type, al.target_id, al.details, 
-                   al.ip_address, al.created_at, u.username, u.full_name
-            FROM audit_logs al
-            LEFT JOIN users u ON al.user_id = u.id
-            WHERE (al.action LIKE ? OR al.description LIKE ? OR u.username LIKE ? OR u.full_name LIKE ?)
-        '''
-        params = [search_term, search_term, search_term, search_term]
+            base_query = '''
+                SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                       al.user_role, al.target_type, al.target_id, al.details, 
+                       al.ip_address, al.created_at, u.username, u.full_name
+                FROM audit_logs al
+                LEFT JOIN users u ON al.user_id = u.id
+                WHERE (al.action LIKE ? OR al.description LIKE ? OR u.username LIKE ? OR u.full_name LIKE ?)
+            '''
+            params = [search_term, search_term, search_term, search_term]
         
-        # Apply role-based filtering
-        if viewer_role and viewer_role != 'comelec':
-            role_permissions = {
-                'nbi': ['legal_record', 'login', 'logout'],
-                'politician': ['verification', 'legal_record', 'vote_result'],
-            }
-            allowed_types = role_permissions.get(viewer_role, [])
-            if allowed_types:
-                placeholders = ','.join(['?' for _ in allowed_types])
-                base_query += f" AND al.action_type IN ({placeholders})"
-                params.extend(allowed_types)
+            # Apply role-based filtering
+            if viewer_role and viewer_role != 'comelec':
+                role_permissions = {
+                    'nbi': ['legal_record', 'login', 'logout'],
+                    'politician': ['verification', 'legal_record', 'vote_result'],
+                }
+                allowed_types = role_permissions.get(viewer_role, [])
+                if allowed_types:
+                    placeholders = ','.join(['?' for _ in allowed_types])
+                    base_query += f" AND al.action_type IN ({placeholders})"
+                    params.extend(allowed_types)
         
-        base_query += " ORDER BY al.created_at DESC LIMIT ?"
-        params.append(limit)
+            base_query += " ORDER BY al.created_at DESC LIMIT ?"
+            params.append(limit)
         
-        self.cursor.execute(base_query, params)
-        return self.cursor.fetchall()
+            self.cursor.execute(base_query, params)
+            return self.cursor.fetchall()
     
     def close(self):
         """Close database connection"""
