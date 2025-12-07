@@ -611,6 +611,14 @@ class ComelecDashboard(ft.Column):
                 self.db.start_voting(self.current_user_id)
         
         self.voting_active = not self.voting_active
+        
+        # Broadcast voting status change to all connected clients
+        if self.page:
+            self.page.pubsub.send_all({
+                "type": "voting_status_changed",
+                "is_active": self.voting_active
+            })
+        
         self._build_ui()
         if self.page:
             self.page.update()

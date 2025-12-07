@@ -1,6 +1,4 @@
 import flet as ft
-import threading
-import time
 
 
 class VoterDashboard(ft.Column):
@@ -27,22 +25,34 @@ class VoterDashboard(ft.Column):
         # Get voting status
         self.voting_active = self._get_voting_status()
         
-        # Polling for voting status changes
-        self._polling_active = True
-        self._polling_thread = None
-        
         # Build UI
         self._build_ui()
     
     def did_mount(self):
-        """Called when the control is added to the page - start polling here"""
-        # Start polling for voting status if not already active
-        if not self.voting_active:
-            self._start_voting_poll()
+        """Called when the control is added to the page - subscribe to voting updates"""
+        if self.page:
+            self.page.pubsub.subscribe(self._on_voting_status_change)
     
     def will_unmount(self):
-        """Called when the control is about to be removed - stop polling"""
-        self.stop_polling()
+        """Called when the control is about to be removed - unsubscribe"""
+        if self.page:
+            self.page.pubsub.unsubscribe()
+    
+    def _on_voting_status_change(self, message):
+        """Handle voting status change broadcast from COMELEC"""
+        if isinstance(message, dict) and message.get("type") == "voting_status_changed":
+            is_active = message.get("is_active", False)
+            if is_active and not self.voting_active:
+                # Voting just started - redirect to voting page
+                self.voting_active = True
+                if self.on_voting_started:
+                    self.on_voting_started()
+            elif not is_active and self.voting_active:
+                # Voting stopped - refresh dashboard
+                self.voting_active = False
+                self._build_ui()
+                if self.page:
+                    self.page.update()
     
     def _get_voting_status(self):
         """Get current voting status from database"""
@@ -568,31 +578,3 @@ class VoterDashboard(ft.Column):
         
         if self.page:
             self.page.update()
-    
-    def _start_voting_poll(self):
-        """Start background polling to check when voting becomes active"""
-        def poll_voting_status():
-            while self._polling_active:
-                time.sleep(2)  # Check every 2 seconds
-                if not self._polling_active:
-                    break
-                
-                try:
-                    new_status = self._get_voting_status()
-                    if new_status and not self.voting_active:
-                        # Voting just started!
-                        self._polling_active = False
-                        self.voting_active = True
-                        if self.on_voting_started and self.page:
-                            # Call directly - show_home_page handles page.clean() and update()
-                            self.on_voting_started()
-                        break
-                except Exception as e:
-                    print(f"Polling error: {e}")  # Debug
-        
-        self._polling_thread = threading.Thread(target=poll_voting_status, daemon=True)
-        self._polling_thread.start()
-    
-    def stop_polling(self):
-        """Stop the voting status polling"""
-        self._polling_active = False

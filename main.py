@@ -102,6 +102,7 @@ class HonestBallotApp:
                 db=self.db,
                 on_logout=self.handle_logout,
                 on_view_profile=self.show_politician_profile,
+                on_voting_stopped=self.show_home_page,  # Auto-refresh when voting stops
             )
             self.page.add(voting_page)
         else:

@@ -4,13 +4,14 @@ import flet as ft
 class VotingPage(ft.Column):
     """Voting Page - Cast votes when voting is active with collapsible position sections"""
     
-    def __init__(self, user_id, username, db, on_logout, on_view_profile=None):
+    def __init__(self, user_id, username, db, on_logout, on_view_profile=None, on_voting_stopped=None):
         super().__init__()
         self.user_id = user_id
         self.username = username
         self.db = db
         self.on_logout = on_logout
         self.on_view_profile = on_view_profile
+        self.on_voting_stopped = on_voting_stopped
         
         # Track votes and UI state
         self.votes = {}  # position -> candidate_id
@@ -27,6 +28,25 @@ class VotingPage(ft.Column):
         
         # Build UI
         self._build_ui()
+    
+    def did_mount(self):
+        """Called when the control is added to the page - subscribe to voting updates"""
+        if self.page:
+            self.page.pubsub.subscribe(self._on_voting_status_change)
+    
+    def will_unmount(self):
+        """Called when the control is about to be removed - unsubscribe"""
+        if self.page:
+            self.page.pubsub.unsubscribe()
+    
+    def _on_voting_status_change(self, message):
+        """Handle voting status change broadcast from COMELEC"""
+        if isinstance(message, dict) and message.get("type") == "voting_status_changed":
+            is_active = message.get("is_active", False)
+            if not is_active:
+                # Voting stopped - go back to dashboard
+                if self.on_voting_stopped:
+                    self.on_voting_stopped()
     
     def _get_candidates_by_position(self):
         """Get all candidates grouped by position"""
