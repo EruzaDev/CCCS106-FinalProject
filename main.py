@@ -319,9 +319,21 @@ class HonestBallotApp:
         self.page.update()
     
     def handle_login(self, username, password):
-        """Handle login attempt"""
+        """Handle login attempt with credential stuffing protection"""
         if not username or not password:
             self.show_error_dialog("Login Error", "Please enter both username and password.")
+            return
+        
+        # Check if account is locked due to too many failed attempts
+        identifier = username.lower()
+        if self.db.is_account_locked(identifier):
+            remaining_time = self.db.get_lockout_remaining_time(identifier)
+            minutes = remaining_time // 60
+            seconds = remaining_time % 60
+            self.show_error_dialog(
+                "Account Locked", 
+                f"Too many failed login attempts. Please try again in {minutes}m {seconds}s."
+            )
             return
         
         # Verify credentials from database (try username first, then email)
@@ -330,6 +342,10 @@ class HonestBallotApp:
             user = self.session_manager.db.verify_user(username, password)
         
         if user:
+            # Record successful login and clear failed attempts
+            self.db.record_login_attempt(identifier, success=True)
+            self.db.clear_failed_attempts(identifier)
+            
             # Create session
             session_token = self.session_manager.create_session(
                 user["id"],
@@ -369,7 +385,30 @@ class HonestBallotApp:
             else:
                 self.show_home_page()
         else:
-            self.show_error_dialog("Login Failed", "Invalid email or password.")
+            # Record failed login attempt
+            self.db.record_login_attempt(identifier, success=False)
+            
+            # Log the failed attempt
+            self.db.log_action(
+                action=f"Failed login attempt for {username}",
+                action_type="login_failed",
+                description=f"Invalid credentials provided",
+                user_id=None,
+                user_role=None,
+            )
+            
+            # Check if account just got locked
+            if self.db.is_account_locked(identifier):
+                self.show_error_dialog(
+                    "Account Locked", 
+                    f"Too many failed attempts. Account locked for {self.db.LOCKOUT_DURATION_MINUTES} minutes."
+                )
+            else:
+                attempts_remaining = self.db.MAX_LOGIN_ATTEMPTS - self.db.get_failed_attempts_count(identifier)
+                self.show_error_dialog(
+                    "Login Failed", 
+                    f"Invalid email or password. {attempts_remaining} attempts remaining."
+                )
     
     def handle_create_account(self, username, email, password):
         """Handle create account"""

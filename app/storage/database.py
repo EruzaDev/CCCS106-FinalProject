@@ -160,6 +160,17 @@ class Database:
             )
         ''')
         
+        # Create login_attempts table for credential stuffing protection
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                identifier TEXT NOT NULL,
+                attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                success BOOLEAN DEFAULT 0,
+                ip_address TEXT
+            )
+        ''')
+        
         self.connection.commit()
     
     def hash_password(self, password):
@@ -609,6 +620,70 @@ class Database:
                 "role": user[3]
             }
         return None
+    
+    # Credential Stuffing Protection Methods
+    MAX_LOGIN_ATTEMPTS = 5
+    LOCKOUT_DURATION_MINUTES = 15
+    
+    def record_login_attempt(self, identifier, success=False, ip_address=None):
+        """Record a login attempt for rate limiting"""
+        self.cursor.execute('''
+            INSERT INTO login_attempts (identifier, success, ip_address)
+            VALUES (?, ?, ?)
+        ''', (identifier.lower(), success, ip_address))
+        self.connection.commit()
+    
+    def get_failed_attempts_count(self, identifier, minutes=15):
+        """Get the number of failed login attempts in the last N minutes"""
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM login_attempts
+            WHERE identifier = ? 
+            AND success = 0
+            AND attempt_time > datetime('now', '-' || ? || ' minutes')
+        ''', (identifier.lower(), minutes))
+        result = self.cursor.fetchone()
+        return result[0] if result else 0
+    
+    def is_account_locked(self, identifier):
+        """Check if account is locked due to too many failed attempts"""
+        failed_attempts = self.get_failed_attempts_count(
+            identifier, 
+            self.LOCKOUT_DURATION_MINUTES
+        )
+        return failed_attempts >= self.MAX_LOGIN_ATTEMPTS
+    
+    def get_lockout_remaining_time(self, identifier):
+        """Get remaining lockout time in seconds"""
+        self.cursor.execute('''
+            SELECT attempt_time FROM login_attempts
+            WHERE identifier = ? AND success = 0
+            ORDER BY attempt_time DESC
+            LIMIT 1
+        ''', (identifier.lower(),))
+        result = self.cursor.fetchone()
+        if result:
+            from datetime import timedelta
+            last_attempt = datetime.strptime(result[0], '%Y-%m-%d %H:%M:%S')
+            lockout_end = last_attempt + timedelta(minutes=self.LOCKOUT_DURATION_MINUTES)
+            remaining = (lockout_end - datetime.now()).total_seconds()
+            return max(0, int(remaining))
+        return 0
+    
+    def clear_failed_attempts(self, identifier):
+        """Clear failed login attempts after successful login"""
+        self.cursor.execute('''
+            DELETE FROM login_attempts
+            WHERE identifier = ? AND success = 0
+        ''', (identifier.lower(),))
+        self.connection.commit()
+    
+    def cleanup_old_login_attempts(self, hours=24):
+        """Clean up old login attempts (older than N hours)"""
+        self.cursor.execute('''
+            DELETE FROM login_attempts
+            WHERE attempt_time < datetime('now', '-' || ? || ' hours')
+        ''', (hours,))
+        self.connection.commit()
     
     # Legal Records Methods (NBI)
     def create_legal_record(self, politician_id, record_type, title, description, date, added_by):

@@ -320,5 +320,91 @@ class TestDatabaseAuditOperations(unittest.TestCase):
         self.assertIsNotNone(nbi_logs)
 
 
+class TestCredentialStuffingProtection(unittest.TestCase):
+    """Test cases for credential stuffing protection (login throttling)"""
+    
+    def setUp(self):
+        """Set up test database before each test"""
+        self.temp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.temp_dir, "test_voting.db")
+        self.db = Database(db_name=self.db_path)
+    
+    def tearDown(self):
+        """Clean up after each test"""
+        try:
+            if self.db and self.db.connection:
+                self.db.close()
+        except:
+            pass
+        try:
+            if os.path.exists(self.db_path):
+                os.remove(self.db_path)
+        except:
+            pass
+        try:
+            if os.path.exists(self.temp_dir):
+                os.rmdir(self.temp_dir)
+        except:
+            pass
+    
+    def test_record_login_attempt(self):
+        """Test that login attempts are recorded"""
+        self.db.record_login_attempt("testuser", success=False)
+        count = self.db.get_failed_attempts_count("testuser")
+        self.assertEqual(count, 1)
+    
+    def test_failed_attempts_count(self):
+        """Test counting failed login attempts"""
+        # Record multiple failed attempts
+        for _ in range(3):
+            self.db.record_login_attempt("testuser", success=False)
+        
+        count = self.db.get_failed_attempts_count("testuser")
+        self.assertEqual(count, 3)
+    
+    def test_successful_attempt_not_counted(self):
+        """Test that successful logins don't count as failures"""
+        self.db.record_login_attempt("testuser", success=True)
+        count = self.db.get_failed_attempts_count("testuser")
+        self.assertEqual(count, 0)
+    
+    def test_account_lockout_after_max_attempts(self):
+        """Test account gets locked after max failed attempts"""
+        # Record max failed attempts
+        for _ in range(self.db.MAX_LOGIN_ATTEMPTS):
+            self.db.record_login_attempt("testuser", success=False)
+        
+        self.assertTrue(self.db.is_account_locked("testuser"))
+    
+    def test_account_not_locked_before_max_attempts(self):
+        """Test account is not locked before reaching max attempts"""
+        # Record one less than max
+        for _ in range(self.db.MAX_LOGIN_ATTEMPTS - 1):
+            self.db.record_login_attempt("testuser", success=False)
+        
+        self.assertFalse(self.db.is_account_locked("testuser"))
+    
+    def test_clear_failed_attempts(self):
+        """Test clearing failed attempts after successful login"""
+        # Record some failed attempts
+        for _ in range(3):
+            self.db.record_login_attempt("testuser", success=False)
+        
+        # Clear them
+        self.db.clear_failed_attempts("testuser")
+        
+        count = self.db.get_failed_attempts_count("testuser")
+        self.assertEqual(count, 0)
+    
+    def test_case_insensitive_identifiers(self):
+        """Test that identifiers are case-insensitive"""
+        self.db.record_login_attempt("TestUser", success=False)
+        self.db.record_login_attempt("testuser", success=False)
+        self.db.record_login_attempt("TESTUSER", success=False)
+        
+        count = self.db.get_failed_attempts_count("testuser")
+        self.assertEqual(count, 3)
+
+
 if __name__ == "__main__":
     unittest.main()
