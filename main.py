@@ -17,6 +17,7 @@ from pages.voter_dashboard import VoterDashboard
 from pages.politician_profile import PoliticianProfile
 from pages.candidate_comparison import CandidateComparison
 from pages.voting_page import VotingPage
+from pages.politician_dashboard import PoliticianDashboard
 from models.database import init_demo_data
 from models.session_manager import SessionManager
 
@@ -157,6 +158,28 @@ class HonestBallotApp:
         self.page.add(comparison_page)
         self.page.update()
     
+    def show_politician_dashboard(self):
+        """Show the Politician dashboard"""
+        self.page.clean()
+        self.page.overlay.clear()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        dashboard = PoliticianDashboard(
+            user_id=self.current_session["user_id"],
+            username=self.current_session["username"],
+            db=self.db,
+            on_logout=self.handle_logout,
+        )
+        
+        # Add file picker to page overlay
+        self.page.overlay.append(dashboard.file_picker)
+        
+        self.page.add(dashboard)
+        self.page.update()
+    
     def show_comelec_dashboard(self):
         """Show the COMELEC dashboard"""
         self.page.clean()
@@ -254,6 +277,8 @@ class HonestBallotApp:
             # Route based on role
             if user["role"] == "comelec":
                 self.show_comelec_dashboard()
+            elif user["role"] == "politician":
+                self.show_politician_dashboard()
             else:
                 self.show_home_page()
         else:
