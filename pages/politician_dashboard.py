@@ -27,6 +27,9 @@ class PoliticianDashboard(ft.Column):
         
         # Edit profile fields
         self.edit_full_name = None
+        self.edit_username = None
+        self.edit_password = None
+        self.edit_confirm_password = None
         self.edit_position = None
         self.edit_party = None
         self.edit_biography = None
@@ -600,6 +603,29 @@ class PoliticianDashboard(ft.Column):
             bgcolor="#FAFAFA",
         )
         
+        self.edit_username = ft.TextField(
+            label="Username",
+            value=self.politician.get("username") or "",
+            border_radius=8,
+            bgcolor="#FAFAFA",
+        )
+        
+        self.edit_password = ft.TextField(
+            label="New Password (leave blank to keep current)",
+            password=True,
+            can_reveal_password=True,
+            border_radius=8,
+            bgcolor="#FAFAFA",
+        )
+        
+        self.edit_confirm_password = ft.TextField(
+            label="Confirm New Password",
+            password=True,
+            can_reveal_password=True,
+            border_radius=8,
+            bgcolor="#FAFAFA",
+        )
+        
         self.edit_position = ft.Dropdown(
             label="Position",
             value=self.politician.get("position") or "",
@@ -707,6 +733,16 @@ class PoliticianDashboard(ft.Column):
                 ft.Container(height=20),
                 self.edit_full_name,
                 ft.Container(height=12),
+                self.edit_username,
+                ft.Container(height=12),
+                ft.Row(
+                    [
+                        ft.Container(content=self.edit_password, expand=True),
+                        ft.Container(content=self.edit_confirm_password, expand=True),
+                    ],
+                    spacing=12,
+                ),
+                ft.Container(height=12),
                 ft.Row(
                     [
                         ft.Container(content=self.edit_position, expand=True),
@@ -799,33 +835,91 @@ class PoliticianDashboard(ft.Column):
             return
         
         full_name = self.edit_full_name.value
+        username = self.edit_username.value if self.edit_username else self.politician.get("username")
+        password = self.edit_password.value if self.edit_password else ""
+        confirm_password = self.edit_confirm_password.value if self.edit_confirm_password else ""
         position = self.edit_position.value if self.edit_position else ""
         party = self.edit_party.value if self.edit_party else ""
         biography = self.edit_biography.value if self.edit_biography else ""
         
+        # Validate username
+        if not username:
+            if self.page:
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Username is required"),
+                    bgcolor="#F44336",
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+            return
+        
+        # Validate password match if changing password
+        if password:
+            if password != confirm_password:
+                if self.page:
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("Passwords do not match"),
+                        bgcolor="#F44336",
+                    )
+                    self.page.snack_bar.open = True
+                    self.page.update()
+                return
+            if len(password) < 4:
+                if self.page:
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("Password must be at least 4 characters"),
+                        bgcolor="#F44336",
+                    )
+                    self.page.snack_bar.open = True
+                    self.page.update()
+                return
+        
         # Update in database
         if self.db:
-            if self.edit_image_data:
-                self.db.update_politician(
-                    self.user_id,
-                    full_name,
-                    self.politician.get("email"),
-                    self.politician.get("username"),
-                    position,
-                    party,
-                    biography,
-                    self.edit_image_data
-                )
-            else:
-                self.db.update_politician(
-                    self.user_id,
-                    full_name,
-                    self.politician.get("email"),
-                    self.politician.get("username"),
-                    position,
-                    party,
-                    biography
-                )
+            try:
+                if password:
+                    # Update with new password
+                    self.db.update_politician_with_password(
+                        self.user_id,
+                        full_name,
+                        self.politician.get("email"),
+                        username,
+                        position,
+                        party,
+                        biography,
+                        password,
+                        self.edit_image_data
+                    )
+                elif self.edit_image_data:
+                    self.db.update_politician(
+                        self.user_id,
+                        full_name,
+                        self.politician.get("email"),
+                        username,
+                        position,
+                        party,
+                        biography,
+                        self.edit_image_data
+                    )
+                else:
+                    self.db.update_politician(
+                        self.user_id,
+                        full_name,
+                        self.politician.get("email"),
+                        username,
+                        position,
+                        party,
+                        biography
+                    )
+            except Exception as ex:
+                if self.page:
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"Error: Username may already be taken"),
+                        bgcolor="#F44336",
+                    )
+                    self.page.snack_bar.open = True
+                    self.page.update()
+                return
         
         # Refresh data
         self.politician = self._get_politician_data()
