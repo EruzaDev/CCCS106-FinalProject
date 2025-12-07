@@ -1,18 +1,19 @@
-# HonestBallot - Voting Application
+# HonestBallot - Secure Voting Application
 
 A cross-platform voting application built with Python Flet framework, designed to provide transparent and secure voting mechanisms with comprehensive election management capabilities.
 
 ## 🎯 Project Overview
 
-HonestBallot is a voting platform that demonstrates how technology can support electoral transparency. The system supports multiple user roles with specialized dashboards for different voting participants.
+HonestBallot is a **local desktop voting platform** that demonstrates how technology can support electoral transparency. The system supports multiple user roles with specialized dashboards for different voting participants.
 
 ### User Roles
 
-1. **Voters** - Cast votes, view election results
-2. **Candidates/Politicians** - Manage profiles and campaign information
-3. **COMELEC Officials** - Manage voting process, view real-time results, verify achievements
-4. **NBI Officers** - Manage legal records for candidates, verify/track legal cases
-5. **Administrators** - System oversight and configuration
+| Role | Capabilities |
+|------|-------------|
+| **Voters** | Cast votes, view election results |
+| **Politicians** | Manage profiles and campaign information |
+| **COMELEC Officials** | Manage voting process, view real-time results, verify achievements |
+| **NBI Officers** | Manage legal records for candidates, verify/track legal cases |
 
 ## 🚀 Features
 
@@ -21,7 +22,13 @@ HonestBallot is a voting platform that demonstrates how technology can support e
 - ✅ Secure voting mechanism with integrity checks
 - ✅ Real-time vote counting and results display
 - ✅ Candidate profile management
-- ✅ Responsive cross-platform design
+
+### Security Features
+- ✅ **bcrypt password hashing** (cost factor 12)
+- ✅ **Rate limiting** - 5 login attempts, 15-minute lockout
+- ✅ **Password policy** - 8+ chars, mixed case, digits, special chars
+- ✅ **Audit logging** - All actions logged for accountability
+- ✅ **Session management** - 30-minute timeout, secure tokens
 
 ### Voting System
 - ✅ Position-based voting interface
@@ -32,93 +39,53 @@ HonestBallot is a voting platform that demonstrates how technology can support e
 
 ### Administrative Features
 - ✅ Election session management
-- ✅ Voter registration
+- ✅ Voter registration and management
 - ✅ Results verification
-- ✅ Audit trails and logging
+- ✅ Audit trails with date range filtering
+- ✅ User activity monitoring
 
 ### NBI Legal Records Management
 - ✅ Legal records tracking for candidates
-- ✅ Record types: Graft, Corruption, Tax Issues, Criminal Cases, etc.
+- ✅ Record types: Graft, Corruption, Tax Issues, Criminal Cases
 - ✅ Record status management (pending, verified, dismissed, rejected)
-- ✅ Add/Edit/Delete legal records
 - ✅ Search and filter records by politician
-- ✅ Statistics dashboard (total, verified, pending records)
 
 ## 🛠️ Technology Stack
 
-### Current Implementation
-- **Framework:** Python Flet (Flutter-based)
-- **Language:** Python 3.11+
-- **Database:** SQLite (Local)
-- **Architecture:** Component-based with MVC pattern
-- **Session Management:** Unique user sessions with token-based authentication
+| Component | Technology |
+|-----------|------------|
+| **Framework** | Python Flet (Flutter-based) |
+| **Language** | Python 3.11+ |
+| **Database** | SQLite (Local) |
+| **Password Hashing** | bcrypt |
+| **Testing** | pytest |
 
-### Key Features
+### Key Characteristics
 - **Local-Only:** Runs completely offline with SQLite database
-- **Multi-User Sessions:** Up to 5 simultaneous users with unique sessions
-- **Pre-Configured Users:** 5 demo users ready to use
-- **Session Tokens:** Each user gets a unique session token
-
-### Planned Production Stack
-- **Backend:** Firebase or Node.js + Express
-- **Database:** Firestore or PostgreSQL
-- **Authentication:** Firebase Auth or JWT
-- **Hosting:** Docker, Heroku, or AWS
-
+- **Multi-User Sessions:** Unique session tokens per user
+- **Pre-Configured Users:** Demo users ready to use
+- **Cross-Platform:** Works on Windows, macOS, Linux
 
 ## 📁 Project Structure
 
 ```
 CCCS106-FinalProject/
 ├── main.py                    # Application entry point
-├── setup_db.py                # Database initialization script
+├── setup_db.py                # Database initialization
 ├── requirements.txt           # Python dependencies
-├── voting_app.db              # Local SQLite database (auto-created)
-├── pages/                     # Main application pages
-│   ├── __init__.py
-│   ├── login_page.py         # User login
-│   ├── signup_page.py        # User registration
-│   ├── home_page.py          # Main dashboard
-│   ├── profile_page.py       # User profile
-│   ├── settings_page.py      # User settings
-│   ├── comelec_dashboard.py  # COMELEC admin dashboard
-│   ├── nbi_dashboard.py      # NBI legal records dashboard
-│   ├── voter_dashboard.py    # Voter main interface
-│   ├── politician_dashboard.py # Politician profile management
-│   ├── voting_page.py        # Voting interface
-│   └── election_results.py   # Results display
-└── models/                    # Data models and database
-    ├── __init__.py
-    ├── database.py           # SQLite database manager
-    └── session_manager.py    # User session management
+├── .env.example               # Configuration template
+├── app/
+│   ├── config.py              # Centralized configuration
+│   ├── password_policy.py     # Password validation
+│   ├── security_logger.py     # Security event logging
+│   ├── storage/database.py    # SQLite database manager
+│   ├── models/                # Data models
+│   ├── views/                 # UI pages
+│   ├── components/            # Reusable UI components
+│   └── services/              # Business logic
+├── tests/                     # Unit tests (90+ tests)
+└── docs/                      # Documentation
 ```
-
-## 📋 Development Roadmap
-
-### Phase 1: Foundation (Current)
-- [x] Project setup and architecture
-- [x] Authentication pages (login/signup)
-- [x] User role management
-- [x] Basic UI components
-
-### Phase 2: Core Features
-- [x] Candidate management
-- [x] Voting interface
-- [x] Vote submission and validation
-- [x] Real-time vote counting
-
-### Phase 3: Results & Admin
-- [x] Results dashboard
-- [x] Election analytics
-- [x] Admin panel (COMELEC Dashboard)
-- [x] NBI Dashboard for legal records
-- [ ] Audit trails
-
-### Phase 4: Polish & Deployment
-- [ ] Testing and optimization
-- [ ] Security hardening
-- [ ] Performance tuning
-- [ ] Production deployment
 
 ## 📦 Installation & Setup
 
@@ -134,13 +101,13 @@ git clone https://github.com/EruzaDev/CCCS106-FinalProject.git
 cd CCCS106-FinalProject
 
 # Create virtual environment
-python -m venv venv
+python -m venv .venv
 
 # Activate virtual environment
 # Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 # macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -154,211 +121,35 @@ python main.py
 
 ### Demo User Credentials
 
-The application comes with pre-configured users for each role:
-
-**Voters:**
-```
-Username: voter1
-Password: voter123
-```
-
-**COMELEC Official:**
-```
-Username: comelec1
-Password: com123
-```
-
-**NBI Officer:**
-```
-Username: nbi1
-Password: nbi123
-```
-
-**Politicians:**
-```
-Username: Roberto Cruz (or any politician name)
-Password: pol123
-```
+| Role | Email | Password |
+|------|-------|----------|
+| COMELEC | comelec1@honestballot.local | com123 |
+| NBI | nbi1@honestballot.local | nbi123 |
+| Voter | voter1@honestballot.local | voter123 |
+| Politician | *(any politician name)* | pol123 |
 
 ### Dependencies
 
 ```txt
-flet>=0.21.0
+flet>=0.28.3
+bcrypt>=4.0.0
+pytest>=8.0.0
 ```
 
-## 🎨 Application Structure
-
-### Local Database System
-
-The application uses SQLite for local data storage with the following tables:
-
-#### Users Table
-- Stores user credentials and roles
-- Password hashing with SHA-256
-- Role-based access control
-
-#### User Sessions Table
-- Tracks active user sessions
-- Each session has a unique token
-- Session timeout after 8 hours of inactivity
-- Supports multiple simultaneous sessions
-
-#### Votes Table
-- Records all cast votes
-- Ensures one vote per user per position
-- Timestamps for audit trails
-
-#### Candidates Table
-- Stores candidate information
-- Positions and party affiliation
-
-#### Election Sessions Table
-- Manages voting sessions
-- Start/end times and active status
-
-### Session Management
-
-Each user login creates a unique session:
-
-```python
-# Session structure
-{
-    "token": "unique-uuid-token",
-    "user_id": 1,
-    "username": "alice_smith",
-    "email": "alice@honestballot.local",
-    "role": "voter",
-    "created_at": "2025-12-07T10:30:00",
-    "last_activity": "2025-12-07T10:35:00"
-}
-```
-
-### Core Components
-
-#### `pages/login_page.py`
-- User authentication with email/password
-- Form validation
-- Demo credentials reference
-
-#### `pages/signup_page.py`
-- New user registration
-- Password confirmation
-- Validation checks
-
-#### `pages/home_page.py`
-- Main dashboard
-- Navigation to features
-- User welcome screen
-
-#### `pages/profile_page.py`
-- User information display
-- Account details
-
-#### `pages/settings_page.py`
-- User preferences
-- Theme and notification settings
-
-## 🚀 Running the Application
-
-### Development Mode (Single Instance)
-```bash
-python main.py
-```
-
-The Flet application will open in your default web browser or as a desktop app.
-
-### Running Multiple User Sessions
-
-Since the app runs locally with SQLite, you can create multiple instances to simulate multiple users:
-
-#### Method 1: Multiple Browser Tabs (Web Mode)
-```bash
-# First instance
-python main.py
-
-# In your terminal, Flet will display a URL like:
-# http://localhost:8550
-
-# Open the same URL in multiple browser tabs to simulate different sessions
-# Each tab will be a separate session
-```
-
-#### Method 2: Multiple Desktop Instances (Desktop Mode)
-```bash
-# Terminal 1
-python main.py
-
-# Terminal 2
-python main.py
-
-# Terminal 3
-python main.py
-
-# Each instance runs independently with its own session
-```
-
-#### Method 3: Multiple Machines on Same Network
-Since the database is local to each machine, each computer can run the app independently:
+## 🧪 Running Tests
 
 ```bash
-# Machine 1
-python main.py
+# Run all tests
+pytest
 
-# Machine 2
-python main.py
+# Run with verbose output
+pytest -v
 
-# Machine 3
-python main.py
+# Run specific test file
+pytest tests/test_database.py
 ```
 
-### Testing Multiple Concurrent Users
-
-Example workflow with 5 users:
-
-1. **Open Terminal 1:**
-   ```bash
-   python main.py
-   # Login as: alice@honestballot.local / password123
-   ```
-
-2. **Open Terminal 2 (in new PowerShell window):**
-   ```bash
-   cd C:\Users\Cjay Lavapie\Downloads\CCCS106-FinalProject
-   python main.py
-   # Login as: bob@honestballot.local / password123
-   ```
-
-3. **Open Terminal 3:**
-   ```bash
-   cd C:\Users\Cjay Lavapie\Downloads\CCCS106-FinalProject
-   python main.py
-   # Login as: charlie@honestballot.local / password123
-   ```
-
-4. **Repeat for diana@honestballot.local and eve@honestballot.local**
-
-Each session maintains its own state with a unique token, and all votes are recorded in the shared local database.
-
-### Build for Distribution
-```bash
-# Web
-flet build web
-
-# Desktop (Windows)
-flet build windows
-
-# Desktop (macOS)
-flet build macos
-
-# Desktop (Linux)
-flet build linux
-
-# Mobile (Android)
-flet build apk
-
-# Mobile (iOS)
-flet build ipa
-```
+**Test Coverage:** 90+ tests covering authentication, voting, security features, and more.
 
 ## 💾 Database Management
 
@@ -367,88 +158,33 @@ flet build ipa
 python setup_db.py
 ```
 
-This creates the SQLite database with:
-- 5 demo users
-- Sample candidates
-- Election session
-
-### Database Location
-```
-voting_app.db (in project root)
-```
-
 ### Reset Database
 ```bash
-# Delete the database file to reset
-rm voting_app.db
-# or
-del voting_app.db  # Windows
+# Delete the database file
+del voting_app.db    # Windows
+rm voting_app.db     # macOS/Linux
 
-# Then reinitialize
+# Reinitialize
 python setup_db.py
 ```
 
-### Database Schema
+## 📚 Documentation
 
-```sql
--- Users table
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'voter',
-    created_at TIMESTAMP,
-    last_login TIMESTAMP
-);
+Detailed documentation is available in the `docs/` folder:
 
--- User Sessions table
-CREATE TABLE user_sessions (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    session_token TEXT UNIQUE NOT NULL,
-    login_time TIMESTAMP,
-    last_activity TIMESTAMP,
-    is_active BOOLEAN DEFAULT 1,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
--- Votes table
-CREATE TABLE votes (
-    id INTEGER PRIMARY KEY,
-    voter_id INTEGER NOT NULL,
-    candidate_id INTEGER NOT NULL,
-    position TEXT NOT NULL,
-    election_session_id INTEGER,
-    timestamp TIMESTAMP,
-    UNIQUE(voter_id, position, election_session_id),
-    FOREIGN KEY (voter_id) REFERENCES users(id)
-);
-
--- Candidates table
-CREATE TABLE candidates (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    position TEXT NOT NULL,
-    party TEXT,
-    bio TEXT,
-    created_at TIMESTAMP
-);
-
--- Election Sessions table
-CREATE TABLE election_sessions (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    start_time TIMESTAMP,
-    end_time TIMESTAMP,
-    is_active BOOLEAN DEFAULT 0,
-    created_at TIMESTAMP
-);
-```
+| Document | Description |
+|----------|-------------|
+| `01_PROJECT_OVERVIEW.md` | Project goals and scope |
+| `02_FEATURE_LIST.md` | Complete feature breakdown |
+| `03_ARCHITECTURE.md` | System design and patterns |
+| `04_DATA_MODEL.md` | Database schema |
+| `05_EMERGING_TECH.md` | Technologies used |
+| `06_SETUP_INSTRUCTIONS.md` | Installation guide |
+| `07_TESTING_SUMMARY.md` | Test coverage report |
+| `SECURITY_ENGINEERING.md` | Security analysis (STRIDE, OWASP) |
 
 ## 🤝 Contributing
 
-### Development Workflow
 1. Create feature branch: `git checkout -b feature/YourFeature`
 2. Commit changes: `git commit -m 'Add YourFeature'`
 3. Push to branch: `git push origin feature/YourFeature`
@@ -468,18 +204,6 @@ This project is licensed under the MIT License.
 
 - **EruzaDev** - Project Lead & Development
 
-## 🙏 Acknowledgments
-
-- Built with [Flet](https://flet.dev/) - A framework for building Flutter apps in Python
-- Inspired by the need for transparent voting systems
-- Open source community for tools and resources
-
-## 📞 Support
-
-For questions or issues:
-- Create an issue on [GitHub Issues](https://github.com/EruzaDev/CCCS106-FinalProject/issues)
-- Contact: support@honestballot.example.com
-
 ---
 
-**Built with 🐍 Python for transparent voting**
+**Built with 🐍 Python and Flet for transparent voting**
