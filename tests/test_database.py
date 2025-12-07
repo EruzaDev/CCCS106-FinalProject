@@ -99,20 +99,25 @@ class TestDatabaseUserOperations(unittest.TestCase):
         self.assertIsNone(user)
     
     def test_password_hashing(self):
-        """Test that passwords are properly hashed"""
+        """Test that passwords are properly hashed with bcrypt"""
         password = "testpassword"
         hash1 = self.db.hash_password(password)
         hash2 = self.db.hash_password(password)
         
-        # Same password should produce same hash
-        self.assertEqual(hash1, hash2)
+        # bcrypt uses random salts, so hashes will be different
+        # but both should verify correctly against the original password
+        self.assertTrue(self.db.verify_password(password, hash1))
+        self.assertTrue(self.db.verify_password(password, hash2))
         
         # Hash should not equal password
         self.assertNotEqual(hash1, password)
         
-        # Different passwords should produce different hashes
+        # Wrong password should not verify
+        self.assertFalse(self.db.verify_password("wrongpassword", hash1))
+        
+        # Different passwords should produce hashes that don't verify each other
         hash3 = self.db.hash_password("differentpassword")
-        self.assertNotEqual(hash1, hash3)
+        self.assertFalse(self.db.verify_password(password, hash3))
     
     def test_get_users_by_role(self):
         """Test getting users by role"""

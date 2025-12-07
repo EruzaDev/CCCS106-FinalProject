@@ -1,6 +1,6 @@
 import sqlite3
 import os
-import hashlib
+import bcrypt
 import json
 from datetime import datetime
 from pathlib import Path
@@ -163,8 +163,21 @@ class Database:
         self.connection.commit()
     
     def hash_password(self, password):
-        """Hash password using SHA-256"""
-        return hashlib.sha256(password.encode()).hexdigest()
+        """Hash password using bcrypt (secure, salted hashing)"""
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        return bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
+    
+    def verify_password(self, password, password_hash):
+        """Verify password against bcrypt hash"""
+        if isinstance(password, str):
+            password = password.encode('utf-8')
+        if isinstance(password_hash, str):
+            password_hash = password_hash.encode('utf-8')
+        try:
+            return bcrypt.checkpw(password, password_hash)
+        except Exception:
+            return False
     
     def create_user(self, username, email, password, role="voter"):
         """Create a new user"""
@@ -180,15 +193,14 @@ class Database:
             return False
     
     def verify_user(self, email, password):
-        """Verify user credentials"""
-        password_hash = self.hash_password(password)
+        """Verify user credentials using bcrypt"""
         self.cursor.execute('''
-            SELECT id, username, email, role FROM users
-            WHERE email = ? AND password_hash = ?
-        ''', (email, password_hash))
+            SELECT id, username, email, role, password_hash FROM users
+            WHERE email = ?
+        ''', (email,))
         
         user = self.cursor.fetchone()
-        if user:
+        if user and self.verify_password(password, user[4]):
             # Update last login
             self.cursor.execute('''
                 UPDATE users SET last_login = CURRENT_TIMESTAMP
@@ -576,15 +588,14 @@ class Database:
         return result[0] if result else 0
     
     def verify_user_by_username(self, username, password):
-        """Verify user credentials by username"""
-        password_hash = self.hash_password(password)
+        """Verify user credentials by username using bcrypt"""
         self.cursor.execute('''
-            SELECT id, username, email, role FROM users
-            WHERE username = ? AND password_hash = ?
-        ''', (username, password_hash))
+            SELECT id, username, email, role, password_hash FROM users
+            WHERE username = ?
+        ''', (username,))
         
         user = self.cursor.fetchone()
-        if user:
+        if user and self.verify_password(password, user[4]):
             # Update last login
             self.cursor.execute('''
                 UPDATE users SET last_login = CURRENT_TIMESTAMP
