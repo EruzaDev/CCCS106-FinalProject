@@ -23,6 +23,7 @@ from app.views.audit_log_page import AuditLogPage
 from app.views.analytics_page import AnalyticsPage
 from app.storage.database import init_demo_data
 from app.state.session_manager import SessionManager
+from app.security_logger import auth_logger
 
 
 class HonestBallotApp:
@@ -363,13 +364,20 @@ class HonestBallotApp:
                 "role": user["role"]
             }
             
-            # Log the login action
+            # Log the login action to database
             self.db.log_action(
                 action=f"User {user['username']} logged in",
                 action_type="login",
                 description=f"Successful login for {user['email']}",
                 user_id=user["id"],
                 user_role=user["role"],
+            )
+            
+            # Log to security logger
+            auth_logger.login_success(
+                username=user["username"],
+                user_id=user["id"],
+                role=user["role"]
             )
             
             # Store in page session
@@ -388,7 +396,7 @@ class HonestBallotApp:
             # Record failed login attempt
             self.db.record_login_attempt(identifier, success=False)
             
-            # Log the failed attempt
+            # Log the failed attempt to database
             self.db.log_action(
                 action=f"Failed login attempt for {username}",
                 action_type="login_failed",
@@ -399,12 +407,23 @@ class HonestBallotApp:
             
             # Check if account just got locked
             if self.db.is_account_locked(identifier):
+                # Log account lockout to security logger
+                auth_logger.account_locked(
+                    username=username,
+                    duration_minutes=self.db.LOCKOUT_DURATION_MINUTES
+                )
                 self.show_error_dialog(
                     "Account Locked", 
                     f"Too many failed attempts. Account locked for {self.db.LOCKOUT_DURATION_MINUTES} minutes."
                 )
             else:
                 attempts_remaining = self.db.MAX_LOGIN_ATTEMPTS - self.db.get_failed_attempts_count(identifier)
+                # Log failed login to security logger
+                auth_logger.login_failed(
+                    username=username,
+                    reason="Invalid credentials",
+                    attempts_remaining=attempts_remaining
+                )
                 self.show_error_dialog(
                     "Login Failed", 
                     f"Invalid email or password. {attempts_remaining} attempts remaining."
@@ -418,6 +437,12 @@ class HonestBallotApp:
         
         # Create user in database
         if self.session_manager.db.create_user(username, email, password, "voter"):
+            # Log new account creation
+            auth_logger.account_created(
+                username=username,
+                user_id=None,  # Will be set after login
+                role="voter"
+            )
             # Auto-login after signup
             self.handle_login(email, password)
         else:
@@ -438,7 +463,7 @@ class HonestBallotApp:
     def handle_logout(self):
         """Handle logout"""
         if self.current_session:
-            # Log the logout action
+            # Log the logout action to database
             self.db.log_action(
                 action=f"User {self.current_session['username']} logged out",
                 action_type="logout",
@@ -446,6 +471,13 @@ class HonestBallotApp:
                 user_id=self.current_session["user_id"],
                 user_role=self.current_session["role"],
             )
+            
+            # Log to security logger
+            auth_logger.logout(
+                username=self.current_session["username"],
+                user_id=self.current_session["user_id"]
+            )
+            
             self.session_manager.end_session(self.current_session["token"])
         
         self.current_session = None
