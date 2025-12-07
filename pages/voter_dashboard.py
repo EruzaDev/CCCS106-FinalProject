@@ -12,7 +12,14 @@ class VoterDashboard(ft.Column):
         self.on_profile_view = on_profile_view
         self.on_compare = on_compare
         self.search_query = ""
-        self.selected_candidates = []  # For comparison
+        self.selected_for_compare = None  # Single candidate selected for comparison {"id": x, "position": y}
+        self.compare_mode = False  # When true, filter to same position only
+        
+        # UI component references for dynamic updates
+        self.search_field = None
+        self.candidate_grid_container = None
+        self.compare_banner_container = None
+        self.content_column = None
         
         # Get voting status
         self.voting_active = self._get_voting_status()
@@ -123,7 +130,49 @@ class VoterDashboard(ft.Column):
     
     def _build_content(self):
         """Build main content area"""
-        # Get politicians from database
+        # Get filtered politicians
+        politicians = self._get_filtered_politicians()
+        
+        # Create search bar with stored reference
+        self.search_field = ft.TextField(
+            hint_text="Search candidates by name, position, or party...",
+            prefix_icon=ft.Icons.SEARCH,
+            border_radius=8,
+            height=45,
+            bgcolor=ft.Colors.WHITE,
+            border_color="#E0E0E0",
+            focused_border_color="#5C6BC0",
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            on_change=self._on_search_change,
+            value=self.search_query,
+            disabled=self.compare_mode,
+        )
+        
+        search_container = ft.Container(content=self.search_field)
+        
+        # Compare banner container (initially empty or with banner)
+        self.compare_banner_container = ft.Container(
+            content=self._build_compare_banner() if self.compare_mode and self.selected_for_compare else None,
+            margin=ft.margin.only(bottom=20) if self.compare_mode else None,
+        )
+        
+        # Candidate grid container with stored reference
+        self.candidate_grid_container = ft.Container(
+            content=self._build_candidate_grid(politicians),
+        )
+        
+        # Store reference to content column for updates
+        self.content_column = ft.Column([
+            search_container,
+            ft.Container(height=20),
+            self.compare_banner_container,
+            self.candidate_grid_container,
+        ])
+        
+        return self.content_column
+    
+    def _get_filtered_politicians(self):
+        """Get politicians filtered by search query and compare mode"""
         politicians = self.db.get_users_by_role("politician") if self.db else []
         
         # Filter by search query
@@ -133,38 +182,80 @@ class VoterDashboard(ft.Column):
                           self.search_query.lower() in (p[7] or "").lower() or
                           self.search_query.lower() in (p[8] or "").lower()]
         
-        return ft.Column(
-            [
-                # Search bar
-                self._build_search_bar(),
-                ft.Container(height=20),
-                # Candidate cards grid
-                self._build_candidate_grid(politicians),
-            ],
-        )
+        # If in compare mode, filter to same position only
+        if self.compare_mode and self.selected_for_compare:
+            target_position = self.selected_for_compare["position"]
+            politicians = [p for p in politicians if p[7] == target_position]
+        
+        return politicians
     
-    def _build_search_bar(self):
-        """Build search bar"""
+    def _build_compare_banner(self):
+        """Build comparison mode banner"""
+        # Get selected candidate name
+        selected_name = "Unknown"
+        if self.db and self.selected_for_compare:
+            users = self.db.get_all_users()
+            for user in users:
+                if user[0] == self.selected_for_compare["id"]:
+                    selected_name = user[5] if user[5] else user[1]
+                    break
+        
         return ft.Container(
-            content=ft.TextField(
-                hint_text="Search candidates by name, position, or party...",
-                prefix_icon=ft.Icons.SEARCH,
-                border_radius=8,
-                height=45,
-                bgcolor=ft.Colors.WHITE,
-                border_color="#E0E0E0",
-                focused_border_color="#5C6BC0",
-                content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-                on_change=self._on_search_change,
+            content=ft.Row(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.COMPARE_ARROWS, color="#5C6BC0", size=24),
+                            ft.Column(
+                                [
+                                    ft.Text(
+                                        "Compare Mode Active",
+                                        size=14,
+                                        weight=ft.FontWeight.BOLD,
+                                        color="#333333",
+                                    ),
+                                    ft.Text(
+                                        f"Select another {self.selected_for_compare['position']} candidate to compare with {selected_name}",
+                                        size=12,
+                                        color="#666666",
+                                    ),
+                                ],
+                                spacing=2,
+                            ),
+                        ],
+                        spacing=12,
+                    ),
+                    ft.ElevatedButton(
+                        "Cancel",
+                        icon=ft.Icons.CLOSE,
+                        bgcolor="#F44336",
+                        color=ft.Colors.WHITE,
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                        on_click=lambda e: self._cancel_compare(),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
+            padding=16,
+            bgcolor="#E8EAF6",
+            border_radius=12,
+            border=ft.border.all(2, "#5C6BC0"),
         )
     
     def _on_search_change(self, e):
-        """Handle search input change"""
+        """Handle search input change - dynamically update grid only"""
         self.search_query = e.control.value
-        self._build_ui()
-        if self.page:
-            self.page.update()
+        self._update_candidate_grid()
+    
+    def _update_candidate_grid(self):
+        """Update only the candidate grid without rebuilding entire UI"""
+        if self.candidate_grid_container:
+            politicians = self._get_filtered_politicians()
+            self.candidate_grid_container.content = self._build_candidate_grid(politicians)
+            if self.page:
+                self.page.update()
     
     def _build_candidate_grid(self, politicians):
         """Build grid of candidate cards"""
@@ -194,6 +285,10 @@ class VoterDashboard(ft.Column):
             verified_count = len([v for v in verifications if v[4] == 'verified'])
             pending_count = len([v for v in verifications if v[4] == 'pending'])
             
+            # Check if this candidate is selected for comparison
+            is_selected = (self.selected_for_compare and 
+                          self.selected_for_compare["id"] == user_id)
+            
             card = self._build_candidate_card(
                 user_id=user_id,
                 name=full_name if full_name else username,
@@ -203,6 +298,7 @@ class VoterDashboard(ft.Column):
                 image=profile_image,
                 verified_count=verified_count,
                 pending_count=pending_count,
+                is_selected=is_selected,
             )
             cards.append(card)
             
@@ -217,7 +313,7 @@ class VoterDashboard(ft.Column):
         
         return ft.Column(rows, spacing=16)
     
-    def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count):
+    def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count, is_selected=False):
         """Build a candidate card"""
         # Create avatar/image
         if image:
@@ -270,18 +366,25 @@ class VoterDashboard(ft.Column):
             visible=pending_count > 0 and verified_count == 0,
         )
         
-        # Compare checkbox
+        # Compare button - different style when selected
+        compare_icon_color = ft.Colors.WHITE if is_selected else "#5C6BC0"
+        compare_bg = "#5C6BC0" if is_selected else ft.Colors.with_opacity(0.9, ft.Colors.WHITE)
+        
         compare_checkbox = ft.Container(
             content=ft.IconButton(
-                icon=ft.Icons.COMPARE_ARROWS,
-                icon_color="#5C6BC0",
+                icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
+                icon_color=compare_icon_color,
                 icon_size=20,
-                tooltip="Add to compare",
+                tooltip="Remove from compare" if is_selected else "Add to compare",
                 on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
             ),
-            bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.WHITE),
+            bgcolor=compare_bg,
             border_radius=20,
         )
+        
+        # Card styling - highlight if selected
+        card_border = ft.border.all(3, "#5C6BC0") if is_selected else None
+        card_shadow_color = ft.Colors.with_opacity(0.3, "#5C6BC0") if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
         
         return ft.Container(
             content=ft.Column(
@@ -303,13 +406,31 @@ class VoterDashboard(ft.Column):
                                 right=10,
                                 top=10,
                             ),
+                            # Selected overlay
+                            ft.Container(
+                                bgcolor=ft.Colors.with_opacity(0.1, "#5C6BC0") if is_selected else None,
+                                border_radius=ft.border_radius.only(top_left=12, top_right=12),
+                                height=160,
+                                width=280,
+                            ) if is_selected else ft.Container(),
                         ],
                     ),
                     # Info section
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Text(name, size=16, weight=ft.FontWeight.BOLD),
+                                ft.Row(
+                                    [
+                                        ft.Text(name, size=16, weight=ft.FontWeight.BOLD, expand=True),
+                                        ft.Container(
+                                            content=ft.Text("SELECTED", size=9, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+                                            bgcolor="#5C6BC0",
+                                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                            border_radius=8,
+                                            visible=is_selected,
+                                        ),
+                                    ],
+                                ),
                                 ft.Text(position, size=12, color="#5C6BC0"),
                                 ft.Text(party, size=11, color="#666666"),
                                 ft.Container(height=8),
@@ -341,9 +462,10 @@ class VoterDashboard(ft.Column):
                                             on_click=lambda e, uid=user_id: self._view_profile(uid),
                                         ),
                                         ft.IconButton(
-                                            icon=ft.Icons.COMPARE_ARROWS,
-                                            icon_color="#5C6BC0",
-                                            tooltip="Compare",
+                                            icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
+                                            icon_color=ft.Colors.WHITE if is_selected else "#5C6BC0",
+                                            bgcolor="#5C6BC0" if is_selected else None,
+                                            tooltip="Remove from compare" if is_selected else "Compare",
                                             on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
                                         ),
                                     ],
@@ -351,6 +473,7 @@ class VoterDashboard(ft.Column):
                             ],
                         ),
                         padding=16,
+                        bgcolor="#F5F5FF" if is_selected else None,
                     ),
                 ],
                 spacing=0,
@@ -358,10 +481,11 @@ class VoterDashboard(ft.Column):
             width=280,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
+            border=card_border,
             shadow=ft.BoxShadow(
                 spread_radius=0,
-                blur_radius=8,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                blur_radius=12 if is_selected else 8,
+                color=card_shadow_color,
             ),
         )
     
@@ -372,29 +496,58 @@ class VoterDashboard(ft.Column):
     
     def _toggle_compare(self, user_id, position):
         """Toggle candidate selection for comparison"""
-        # Find if already selected
-        existing = [c for c in self.selected_candidates if c["id"] == user_id]
+        # If clicking on already selected candidate, deselect and exit compare mode
+        if self.selected_for_compare and self.selected_for_compare["id"] == user_id:
+            self._cancel_compare()
+            return
         
-        if existing:
-            self.selected_candidates = [c for c in self.selected_candidates if c["id"] != user_id]
+        # If no candidate selected yet, select this one and enter compare mode
+        if not self.selected_for_compare:
+            self.selected_for_compare = {"id": user_id, "position": position}
+            self.compare_mode = True
+            self._update_compare_ui()
+            return
+        
+        # If a candidate is selected and clicking another one with same position
+        if self.selected_for_compare["position"] == position:
+            # Trigger comparison
+            if self.on_compare:
+                self.on_compare(self.selected_for_compare["id"], user_id)
+            # Reset compare mode
+            self._cancel_compare()
         else:
-            # Only allow comparing same positions
-            if len(self.selected_candidates) > 0:
-                first_position = self.selected_candidates[0]["position"]
-                if position != first_position:
-                    # Show error - can only compare same positions
-                    if self.page:
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text(f"Can only compare candidates for the same position ({first_position})"),
-                            bgcolor="#F44336",
-                        )
-                        self.page.snack_bar.open = True
-                        self.page.update()
-                    return
-            
-            self.selected_candidates.append({"id": user_id, "position": position})
-            
-            # If 2 candidates selected, trigger comparison
-            if len(self.selected_candidates) == 2 and self.on_compare:
-                self.on_compare(self.selected_candidates[0]["id"], self.selected_candidates[1]["id"])
-                self.selected_candidates = []
+            # Different position - show error
+            if self.page:
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Can only compare candidates for the same position"),
+                    bgcolor="#F44336",
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+    
+    def _cancel_compare(self):
+        """Cancel comparison mode"""
+        self.selected_for_compare = None
+        self.compare_mode = False
+        self._update_compare_ui()
+    
+    def _update_compare_ui(self):
+        """Update UI for compare mode changes without losing search state"""
+        # Update search field disabled state
+        if self.search_field:
+            self.search_field.disabled = self.compare_mode
+        
+        # Update compare banner
+        if self.compare_banner_container:
+            if self.compare_mode and self.selected_for_compare:
+                self.compare_banner_container.content = self._build_compare_banner()
+                self.compare_banner_container.margin = ft.margin.only(bottom=20)
+            else:
+                self.compare_banner_container.content = None
+                self.compare_banner_container.margin = None
+        
+        # Update candidate grid
+        self._update_candidate_grid()
+        
+        if self.page:
+            self.page.update()

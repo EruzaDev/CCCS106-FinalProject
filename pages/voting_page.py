@@ -2,7 +2,7 @@ import flet as ft
 
 
 class VotingPage(ft.Column):
-    """Voting Page - Cast votes when voting is active"""
+    """Voting Page - Cast votes when voting is active with collapsible position sections"""
     
     def __init__(self, user_id, username, db, on_logout, on_view_profile=None):
         super().__init__()
@@ -12,9 +12,12 @@ class VotingPage(ft.Column):
         self.on_logout = on_logout
         self.on_view_profile = on_view_profile
         
-        # Track votes
+        # Track votes and UI state
         self.votes = {}  # position -> candidate_id
         self.submitted_positions = set()
+        self.expanded_positions = set()  # Track which positions are expanded
+        self.selected_candidates = {}  # position -> candidate_id (before submit)
+        self.change_vote_mode = set()  # Positions where user is changing their vote
         
         # Get candidates grouped by position
         self.candidates_by_position = self._get_candidates_by_position()
@@ -35,19 +38,33 @@ class VotingPage(ft.Column):
                 if position:
                     if position not in candidates:
                         candidates[position] = []
+                    
+                    # Get verification info
+                    verifications = self.db.get_verifications_by_politician(user_id) if self.db else []
+                    verified_count = len([v for v in verifications if v[4] == 'verified'])
+                    total_achievements = len(verifications)
+                    
+                    # Get any records (placeholder for NBI integration)
+                    records_count = 1 if user_id % 3 == 0 else 0  # Demo: some have records
+                    
                     candidates[position].append({
                         "id": user_id,
                         "name": full_name if full_name else username,
                         "party": party if party else "Independent",
                         "image": profile_image,
+                        "verified": verified_count > 0,
+                        "achievements": total_achievements,
+                        "records": records_count,
                     })
         return candidates
     
     def _load_existing_votes(self):
-        """Load existing votes for this user"""
-        # Check database for existing votes
-        # For now, we'll track this session only
-        pass
+        """Load existing votes for this user from database"""
+        if self.db:
+            existing_votes = self.db.get_votes_by_voter(self.user_id)
+            for position, candidate_id in existing_votes:
+                self.votes[position] = candidate_id
+                self.submitted_positions.add(position)
     
     def _build_ui(self):
         """Build the main UI"""
@@ -146,6 +163,10 @@ class VotingPage(ft.Column):
         voted_positions = len(self.submitted_positions)
         all_voted = voted_positions == total_positions and total_positions > 0
         
+        position_cards = []
+        for position, candidates in sorted(self.candidates_by_position.items()):
+            position_cards.append(self._build_position_section(position, candidates))
+        
         return ft.Column(
             [
                 # Cast Your Vote header
@@ -180,9 +201,8 @@ class VotingPage(ft.Column):
                 # Voting Progress
                 self._build_voting_progress(voted_positions, total_positions),
                 ft.Container(height=20),
-                # Position cards
-                *[self._build_position_card(position, candidates) 
-                  for position, candidates in sorted(self.candidates_by_position.items())],
+                # Position sections (collapsible)
+                *position_cards,
                 # Voting complete message
                 self._build_voting_complete() if all_voted else ft.Container(),
             ],
@@ -221,214 +241,304 @@ class VotingPage(ft.Column):
             ),
         )
     
-    def _build_position_card(self, position, candidates):
-        """Build a card for a voting position"""
+    def _build_position_section(self, position, candidates):
+        """Build a collapsible section for a voting position"""
         is_voted = position in self.submitted_positions
-        selected_candidate = self.votes.get(position)
+        is_expanded = position in self.expanded_positions
+        
+        # Header row
+        header = ft.Container(
+            content=ft.Row(
+                [
+                    ft.Row(
+                        [
+                            ft.Container(
+                                content=ft.Icon(
+                                    ft.Icons.CHECK_BOX if is_voted else ft.Icons.CHECK_BOX_OUTLINE_BLANK,
+                                    color="#5C6BC0" if is_voted else "#666666",
+                                    size=24,
+                                ),
+                                bgcolor="#E8EAF6" if is_voted else None,
+                                border_radius=4,
+                            ),
+                            ft.Column(
+                                [
+                                    ft.Text(position, size=16, weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"{len(candidates)} candidates", size=12, color="#666666"),
+                                ],
+                                spacing=2,
+                            ),
+                        ],
+                        spacing=12,
+                    ),
+                    ft.Row(
+                        [
+                            ft.TextButton(
+                                "Change Vote" if is_voted and position not in self.change_vote_mode else "",
+                                style=ft.ButtonStyle(color="#FF9800"),
+                                on_click=lambda e, pos=position: self._enable_change_vote(pos),
+                                visible=is_voted and position not in self.change_vote_mode,
+                            ),
+                            ft.TextButton(
+                                "Collapse" if is_expanded else "Vote Now" if not is_voted else "Changing..." if position in self.change_vote_mode else "Vote Submitted",
+                                style=ft.ButtonStyle(
+                                    color="#FF9800" if position in self.change_vote_mode else "#5C6BC0" if not is_voted else "#4CAF50",
+                                ),
+                                on_click=lambda e, pos=position: self._toggle_position(pos),
+                            ),
+                        ],
+                        spacing=0,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            padding=16,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=ft.border_radius.only(top_left=12, top_right=12) if is_expanded else 12,
+            ink=True,
+            on_click=lambda e, pos=position: self._toggle_position(pos),
+        )
+        
+        # Candidates list (only if expanded)
+        if is_expanded:
+            candidate_cards = [
+                self._build_candidate_card(candidate, position, is_voted)
+                for candidate in candidates
+            ]
+            
+            candidates_section = ft.Container(
+                content=ft.Column(
+                    candidate_cards,
+                    spacing=0,
+                ),
+                bgcolor=ft.Colors.WHITE,
+                padding=ft.padding.only(left=16, right=16, bottom=16),
+                border_radius=ft.border_radius.only(bottom_left=12, bottom_right=12),
+            )
+            
+            return ft.Container(
+                content=ft.Column(
+                    [header, candidates_section],
+                    spacing=0,
+                ),
+                margin=ft.margin.only(bottom=12),
+                shadow=ft.BoxShadow(
+                    spread_radius=0,
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                ),
+                border_radius=12,
+                border=ft.border.all(2, "#4CAF50") if is_voted else None,
+            )
+        else:
+            return ft.Container(
+                content=header,
+                margin=ft.margin.only(bottom=12),
+                shadow=ft.BoxShadow(
+                    spread_radius=0,
+                    blur_radius=4,
+                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                ),
+                border_radius=12,
+                border=ft.border.all(2, "#4CAF50") if is_voted else None,
+            )
+    
+    def _build_candidate_card(self, candidate, position, is_voted):
+        """Build a clickable candidate card"""
+        is_changing = position in self.change_vote_mode
+        is_selected = self.selected_candidates.get(position) == candidate["id"]
+        is_submitted = position in self.submitted_positions and self.votes.get(position) == candidate["id"]
+        
+        # Profile image
+        if candidate.get("image"):
+            avatar = ft.Container(
+                content=ft.Image(
+                    src_base64=candidate["image"],
+                    fit=ft.ImageFit.COVER,
+                    width=50,
+                    height=50,
+                ),
+                width=50,
+                height=50,
+                border_radius=25,
+                clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            )
+        else:
+            avatar = ft.CircleAvatar(
+                content=ft.Text(candidate["name"][0].upper() if candidate["name"] else "?", size=18),
+                bgcolor="#E8EAF6",
+                radius=25,
+            )
+        
+        # Determine card styling based on state
+        if is_submitted and not is_changing:
+            bg_color = "#E8F5E9"
+            border_color = "#4CAF50"
+            border_width = 2
+        elif is_submitted and is_changing:
+            # Current vote while changing - show as orange
+            bg_color = "#FFF3E0"
+            border_color = "#FF9800"
+            border_width = 2
+        elif is_selected:
+            bg_color = "#E8EAF6"
+            border_color = "#5C6BC0"
+            border_width = 2
+        else:
+            bg_color = "#FAFAFA"
+            border_color = "#E0E0E0"
+            border_width = 1
         
         return ft.Container(
             content=ft.Row(
                 [
+                    avatar,
                     ft.Column(
                         [
+                            ft.Text(candidate["name"], size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(candidate["party"], size=12, color="#666666"),
                             ft.Row(
                                 [
+                                    # Verified badge
                                     ft.Container(
-                                        content=ft.Icon(
-                                            ft.Icons.CHECK_CIRCLE if is_voted else ft.Icons.RADIO_BUTTON_UNCHECKED,
-                                            color="#4CAF50" if is_voted else "#CCCCCC",
-                                            size=20,
+                                        content=ft.Row(
+                                            [
+                                                ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=12),
+                                                ft.Text("Verified", size=10, color="#4CAF50"),
+                                            ],
+                                            spacing=2,
                                         ),
-                                        bgcolor="#E8F5E9" if is_voted else "#F5F5F5",
-                                        border_radius=20,
-                                        padding=4,
+                                        visible=candidate.get("verified", False),
                                     ),
-                                    ft.Text(position, size=16, weight=ft.FontWeight.BOLD),
+                                    # Achievements
+                                    ft.Row(
+                                        [
+                                            ft.Icon(ft.Icons.EMOJI_EVENTS, color="#666666", size=12),
+                                            ft.Text(f"{candidate.get('achievements', 0)} Achievements", size=10, color="#666666"),
+                                        ],
+                                        spacing=2,
+                                    ),
+                                    # Records (if any)
+                                    ft.Container(
+                                        content=ft.Row(
+                                            [
+                                                ft.Icon(ft.Icons.WARNING, color="#FF9800", size=12),
+                                                ft.Text(f"{candidate.get('records', 0)} Record", size=10, color="#FF9800"),
+                                            ],
+                                            spacing=2,
+                                        ),
+                                        visible=candidate.get("records", 0) > 0,
+                                    ),
                                 ],
                                 spacing=12,
                             ),
-                            ft.Text(f"{len(candidates)} candidates", size=12, color="#666666"),
                         ],
+                        spacing=2,
                         expand=True,
                     ),
-                    ft.ElevatedButton(
-                        "Vote Submitted" if is_voted else "Vote Now",
-                        icon=ft.Icons.CHECK if is_voted else ft.Icons.HOW_TO_VOTE,
-                        bgcolor="#4CAF50" if is_voted else "#5C6BC0",
-                        color=ft.Colors.WHITE,
-                        disabled=is_voted,
-                        style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=8),
-                        ),
-                        on_click=lambda e, pos=position, cands=candidates: self._show_voting_dialog(pos, cands),
+                    # View profile button (always visible)
+                    ft.IconButton(
+                        icon=ft.Icons.VISIBILITY,
+                        icon_color="#5C6BC0",
+                        icon_size=20,
+                        tooltip="View Profile",
+                        on_click=lambda e, cid=candidate["id"]: self._view_profile(cid),
                     ),
                 ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=20,
-            bgcolor=ft.Colors.WHITE,
-            border_radius=12,
-            border=ft.border.all(2, "#4CAF50") if is_voted else None,
-            margin=ft.margin.only(bottom=12),
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=4,
-                color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
-            ),
+            padding=12,
+            bgcolor=bg_color,
+            border=ft.border.all(border_width, border_color),
+            border_radius=8,
+            margin=ft.margin.only(bottom=8),
+            ink=True,
+            on_click=lambda e, cid=candidate["id"], pos=position: self._select_candidate(cid, pos) if (not is_voted or is_changing) else None,
         )
     
-    def _show_voting_dialog(self, position, candidates):
-        """Show dialog to vote for a position"""
-        selected_id = None
+    def _enable_change_vote(self, position):
+        """Enable change vote mode for a position"""
+        self.change_vote_mode.add(position)
+        # Also expand the position
+        self.expanded_positions.add(position)
+        self._build_ui()
+        if self.page:
+            self.page.update()
+    
+    def _toggle_position(self, position):
+        """Toggle expand/collapse for a position"""
+        if position in self.expanded_positions:
+            self.expanded_positions.remove(position)
+            # Also exit change mode when collapsing
+            self.change_vote_mode.discard(position)
+        else:
+            self.expanded_positions.add(position)
         
-        def on_candidate_select(e, candidate_id):
-            nonlocal selected_id
-            selected_id = candidate_id
-            # Update radio buttons visual state
-            for control in candidate_list.controls:
-                if hasattr(control, 'data') and control.data == candidate_id:
-                    control.bgcolor = "#E8EAF6"
-                    control.border = ft.border.all(2, "#5C6BC0")
+        self._build_ui()
+        if self.page:
+            self.page.update()
+    
+    def _select_candidate(self, candidate_id, position):
+        """Select a candidate for voting"""
+        is_changing = position in self.change_vote_mode
+        
+        if position in self.submitted_positions and not is_changing:
+            return  # Can't change vote unless in change mode
+        
+        # If changing vote and clicking same candidate, cancel change mode
+        if is_changing and self.votes.get(position) == candidate_id:
+            self.change_vote_mode.discard(position)
+            self._build_ui()
+            if self.page:
+                self.page.update()
+            return
+        
+        # Toggle selection or select new
+        if self.selected_candidates.get(position) == candidate_id:
+            # Deselect
+            del self.selected_candidates[position]
+        else:
+            # Select and submit immediately
+            self.selected_candidates[position] = candidate_id
+            self._submit_vote(position, candidate_id, is_update=is_changing)
+    
+    def _submit_vote(self, position, candidate_id, is_update=False):
+        """Submit vote for a position"""
+        # Record the vote
+        self.votes[position] = candidate_id
+        self.submitted_positions.add(position)
+        
+        # Save to database
+        if self.db:
+            try:
+                if is_update:
+                    self.db.update_vote(self.user_id, candidate_id, position)
                 else:
-                    control.bgcolor = ft.Colors.WHITE
-                    control.border = ft.border.all(1, "#E0E0E0")
-            if self.page:
-                self.page.update()
+                    self.db.cast_vote(self.user_id, candidate_id, position)
+            except Exception as e:
+                print(f"Error casting vote: {e}")
         
-        def on_submit(e):
-            if selected_id:
-                # Cast vote
-                self.votes[position] = selected_id
-                self.submitted_positions.add(position)
-                
-                # Save to database
-                if self.db:
-                    self.db.cast_vote(self.user_id, selected_id, position)
-                
-                # Close dialog and rebuild UI
-                dialog.open = False
-                self._build_ui()
-                if self.page:
-                    self.page.update()
+        # Exit change vote mode if active
+        self.change_vote_mode.discard(position)
         
-        def on_view_profile(e, candidate_id):
-            dialog.open = False
-            if self.page:
-                self.page.update()
-            if self.on_view_profile:
-                self.on_view_profile(candidate_id)
+        # Collapse the section after voting
+        if position in self.expanded_positions:
+            self.expanded_positions.remove(position)
         
-        # Build candidate list
-        candidate_controls = []
-        for candidate in candidates:
-            # Get verification count
-            verifications = self.db.get_verifications_by_politician(candidate["id"]) if self.db else []
-            verified_count = len([v for v in verifications if v[4] == 'verified'])
-            
-            # Profile image
-            if candidate.get("image"):
-                avatar = ft.CircleAvatar(
-                    foreground_image_src=f"data:image/png;base64,{candidate['image']}",
-                    radius=25,
-                )
-            else:
-                avatar = ft.CircleAvatar(
-                    content=ft.Text(candidate["name"][0].upper() if candidate["name"] else "?"),
-                    bgcolor="#E8EAF6",
-                    radius=25,
-                )
-            
-            candidate_card = ft.Container(
-                content=ft.Row(
-                    [
-                        ft.Radio(value=str(candidate["id"]), fill_color="#5C6BC0"),
-                        avatar,
-                        ft.Column(
-                            [
-                                ft.Row(
-                                    [
-                                        ft.Text(candidate["name"], size=14, weight=ft.FontWeight.W_500),
-                                        ft.Container(
-                                            content=ft.Row(
-                                                [
-                                                    ft.Icon(ft.Icons.VERIFIED, color=ft.Colors.WHITE, size=10),
-                                                    ft.Text("Verified", size=9, color=ft.Colors.WHITE),
-                                                ],
-                                                spacing=2,
-                                            ),
-                                            bgcolor="#4CAF50",
-                                            padding=ft.padding.symmetric(horizontal=6, vertical=2),
-                                            border_radius=8,
-                                            visible=verified_count > 0,
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
-                                ft.Text(candidate["party"], size=11, color="#666666"),
-                            ],
-                            spacing=2,
-                            expand=True,
-                        ),
-                        ft.IconButton(
-                            icon=ft.Icons.VISIBILITY,
-                            icon_color="#5C6BC0",
-                            icon_size=20,
-                            tooltip="View Profile",
-                            on_click=lambda e, cid=candidate["id"]: on_view_profile(e, cid),
-                        ),
-                    ],
-                    spacing=12,
-                ),
-                padding=12,
-                bgcolor=ft.Colors.WHITE,
-                border=ft.border.all(1, "#E0E0E0"),
-                border_radius=8,
-                data=candidate["id"],
-                ink=True,
-                on_click=lambda e, cid=candidate["id"]: on_candidate_select(e, cid),
-            )
-            candidate_controls.append(candidate_card)
+        # Clear selection
+        if position in self.selected_candidates:
+            del self.selected_candidates[position]
         
-        candidate_list = ft.Column(candidate_controls, spacing=8)
-        
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text(f"Vote for {position}"),
-            content=ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text("Select your preferred candidate:", size=14, color="#666666"),
-                        ft.Container(height=12),
-                        candidate_list,
-                    ],
-                    scroll=ft.ScrollMode.AUTO,
-                ),
-                width=400,
-                height=400,
-            ),
-            actions=[
-                ft.TextButton("Cancel", on_click=lambda e: self._close_dialog(dialog)),
-                ft.ElevatedButton(
-                    "Submit Vote",
-                    bgcolor="#5C6BC0",
-                    color=ft.Colors.WHITE,
-                    on_click=on_submit,
-                ),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
-        
+        # Rebuild UI
+        self._build_ui()
         if self.page:
-            self.page.overlay.append(dialog)
-            dialog.open = True
             self.page.update()
     
-    def _close_dialog(self, dialog):
-        """Close a dialog"""
-        dialog.open = False
-        if self.page:
-            self.page.update()
+    def _view_profile(self, candidate_id):
+        """View politician profile"""
+        if self.on_view_profile:
+            self.on_view_profile(candidate_id)
     
     def _build_voting_complete(self):
         """Build voting complete message"""

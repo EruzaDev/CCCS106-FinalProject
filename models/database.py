@@ -229,6 +229,20 @@ class Database:
             # User already voted for this position
             return False
     
+    def update_vote(self, voter_id, candidate_id, position):
+        """Update an existing vote for a position"""
+        try:
+            self.cursor.execute('''
+                UPDATE votes 
+                SET candidate_id = ?, voted_at = CURRENT_TIMESTAMP
+                WHERE voter_id = ? AND position = ?
+            ''', (candidate_id, voter_id, position))
+            self.connection.commit()
+            return self.cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error updating vote: {e}")
+            return False
+    
     def get_votes_by_position(self, position, election_session_id=None):
         """Get vote counts by position"""
         if election_session_id:
@@ -248,6 +262,23 @@ class Database:
                 ORDER BY count DESC
             ''', (position,))
         return self.cursor.fetchall()
+    
+    def get_votes_by_voter(self, voter_id):
+        """Get all votes cast by a specific voter"""
+        self.cursor.execute('''
+            SELECT position, candidate_id FROM votes
+            WHERE voter_id = ?
+        ''', (voter_id,))
+        return self.cursor.fetchall()
+    
+    def has_voted_for_position(self, voter_id, position):
+        """Check if voter has already voted for a position"""
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM votes
+            WHERE voter_id = ? AND position = ?
+        ''', (voter_id, position))
+        result = self.cursor.fetchone()
+        return result[0] > 0 if result else False
     
     def get_candidates_by_position(self, position):
         """Get all candidates for a position"""

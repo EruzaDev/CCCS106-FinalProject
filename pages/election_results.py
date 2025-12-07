@@ -261,9 +261,17 @@ class ElectionResults(ft.Column):
         
         # Create avatar
         if candidate.get("image"):
-            avatar = ft.CircleAvatar(
-                foreground_image_src=f"data:image/png;base64,{candidate['image']}",
-                radius=22,
+            avatar = ft.Container(
+                content=ft.Image(
+                    src_base64=candidate["image"],
+                    fit=ft.ImageFit.COVER,
+                    width=44,
+                    height=44,
+                ),
+                width=44,
+                height=44,
+                border_radius=22,
+                clip_behavior=ft.ClipBehavior.HARD_EDGE,
             )
         else:
             avatar = ft.CircleAvatar(

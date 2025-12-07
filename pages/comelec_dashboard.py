@@ -14,6 +14,13 @@ class ComelecDashboard(ft.Column):
         self.on_candidates = on_candidates
         self.current_user_id = current_user_id
         
+        # Dialog reference
+        self.edit_dialog = None
+        
+        # Search state
+        self.candidate_search_query = ""
+        self.candidates_table_container = None
+        
         # Get voting status from database
         status = self.db.get_voting_status() if self.db else {"is_active": False}
         self.voting_active = status["is_active"]
@@ -270,8 +277,13 @@ class ComelecDashboard(ft.Column):
     
     def _build_candidate_management(self):
         """Build candidate management section"""
-        # Get politicians from database
-        politicians = self.db.get_users_by_role("politician") if self.db else []
+        # Get filtered politicians
+        politicians = self._get_filtered_candidates()
+        
+        # Create candidates table container with stored reference
+        self.candidates_table_container = ft.Container(
+            content=self._build_candidates_table(politicians),
+        )
         
         return ft.Container(
             content=ft.Column(
@@ -286,17 +298,19 @@ class ComelecDashboard(ft.Column):
                         ],
                     ),
                     ft.Container(height=12),
-                    # Search bar
+                    # Search bar with handler
                     ft.TextField(
-                        hint_text="Search candidates...",
+                        hint_text="Search candidates by name, position, or party...",
                         prefix_icon=ft.Icons.SEARCH,
                         border_radius=8,
                         height=40,
                         content_padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                        value=self.candidate_search_query,
+                        on_change=self._on_candidate_search_change,
                     ),
                     ft.Container(height=16),
-                    # Candidates table
-                    self._build_candidates_table(politicians),
+                    # Candidates table (dynamic)
+                    self.candidates_table_container,
                 ],
             ),
             padding=24,
@@ -308,6 +322,32 @@ class ComelecDashboard(ft.Column):
                 color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
             ),
         )
+    
+    def _get_filtered_candidates(self):
+        """Get candidates filtered by search query"""
+        politicians = self.db.get_users_by_role("politician") if self.db else []
+        
+        if self.candidate_search_query:
+            query = self.candidate_search_query.lower()
+            politicians = [p for p in politicians if 
+                          query in (p[5] or p[1] or "").lower() or  # full_name or username
+                          query in (p[7] or "").lower() or  # position
+                          query in (p[8] or "").lower()]  # party
+        
+        return politicians
+    
+    def _on_candidate_search_change(self, e):
+        """Handle candidate search input change"""
+        self.candidate_search_query = e.control.value
+        self._update_candidates_table()
+    
+    def _update_candidates_table(self):
+        """Update only the candidates table without rebuilding entire UI"""
+        if self.candidates_table_container:
+            politicians = self._get_filtered_candidates()
+            self.candidates_table_container.content = self._build_candidates_table(politicians)
+            if self.page:
+                self.page.update()
     
     def _build_candidates_table(self, politicians):
         """Build candidates data table"""
@@ -322,15 +362,54 @@ class ComelecDashboard(ft.Column):
             
             # Create avatar with image or icon
             if profile_image:
-                avatar = ft.CircleAvatar(
-                    foreground_image_src=f"data:image/png;base64,{profile_image}",
-                    radius=18,
+                avatar = ft.Container(
+                    content=ft.Image(
+                        src_base64=profile_image,
+                        fit=ft.ImageFit.COVER,
+                        width=36,
+                        height=36,
+                    ),
+                    width=36,
+                    height=36,
+                    border_radius=18,
+                    clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 )
             else:
                 avatar = ft.CircleAvatar(
                     content=ft.Text(display_name[0].upper() if display_name else "?"),
                     bgcolor="#E8EAF6",
                     radius=18,
+                )
+            
+            # Get verification info for this candidate
+            verifications = self.db.get_verifications_by_politician(user_id) if self.db else []
+            verified_count = len([v for v in verifications if v[4] == 'verified'])
+            total_count = len(verifications)
+            
+            # Verification badge
+            if verified_count > 0:
+                verified_cell = ft.Row(
+                    [
+                        ft.Icon(ft.Icons.CHECK_CIRCLE, color="#4CAF50", size=16),
+                        ft.Text(f"{verified_count}/{total_count}", size=12, color="#4CAF50"),
+                    ],
+                    spacing=4,
+                )
+            elif total_count > 0:
+                verified_cell = ft.Row(
+                    [
+                        ft.Icon(ft.Icons.PENDING, color="#FF9800", size=16),
+                        ft.Text(f"0/{total_count}", size=12, color="#FF9800"),
+                    ],
+                    spacing=4,
+                )
+            else:
+                verified_cell = ft.Row(
+                    [
+                        ft.Icon(ft.Icons.REMOVE_CIRCLE_OUTLINE, color="#999999", size=16),
+                        ft.Text("None", size=12, color="#999999"),
+                    ],
+                    spacing=4,
                 )
             
             rows.append(
@@ -359,19 +438,12 @@ class ComelecDashboard(ft.Column):
                                 border_radius=12,
                             )
                         ),
-                        ft.DataCell(
-                            ft.Row(
-                                [
-                                    ft.Icon(ft.Icons.CHECK_CIRCLE, color="#4CAF50", size=16),
-                                    ft.Text("Yes", size=12, color="#4CAF50"),
-                                ],
-                                spacing=4,
-                            )
-                        ),
+                        ft.DataCell(verified_cell),
                         ft.DataCell(
                             ft.TextButton(
                                 "Edit",
                                 style=ft.ButtonStyle(color="#5C6BC0"),
+                                on_click=lambda e, uid=user_id, name=display_name, pos=display_position: self._show_edit_candidate_dialog(uid, name, pos),
                             )
                         ),
                     ],
@@ -541,4 +613,175 @@ class ComelecDashboard(ft.Column):
         self.voting_active = not self.voting_active
         self._build_ui()
         if self.page:
+            self.page.update()
+    
+    def _show_edit_candidate_dialog(self, user_id, name, position):
+        """Show dialog to edit candidate verifications"""
+        # Get verifications for this candidate
+        verifications = self.db.get_verifications_by_politician(user_id) if self.db else []
+        
+        # Build verification items
+        verification_items = []
+        for v in verifications:
+            ver_id, title, description, evidence_url, status, created_at = v
+            
+            # Status badge
+            if status == "verified":
+                status_badge = ft.Container(
+                    content=ft.Text("Verified", size=10, color=ft.Colors.WHITE),
+                    bgcolor="#4CAF50",
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=8,
+                )
+            elif status == "rejected":
+                status_badge = ft.Container(
+                    content=ft.Text("Rejected", size=10, color=ft.Colors.WHITE),
+                    bgcolor="#F44336",
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=8,
+                )
+            else:
+                status_badge = ft.Container(
+                    content=ft.Text("Pending", size=10, color=ft.Colors.WHITE),
+                    bgcolor="#FF9800",
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=8,
+                )
+            
+            verification_items.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Text(title, weight=ft.FontWeight.BOLD, size=13, expand=True),
+                                    status_badge,
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            ft.Text(description if description else "No description", size=11, color="#666666"),
+                            ft.Container(height=8),
+                            ft.Row(
+                                [
+                                    ft.ElevatedButton(
+                                        "Verify",
+                                        icon=ft.Icons.CHECK,
+                                        bgcolor="#4CAF50",
+                                        color=ft.Colors.WHITE,
+                                        height=32,
+                                        style=ft.ButtonStyle(
+                                            shape=ft.RoundedRectangleBorder(radius=6),
+                                            padding=ft.padding.symmetric(horizontal=12),
+                                        ),
+                                        on_click=lambda e, vid=ver_id, uid=user_id, n=name, p=position: self._update_verification_status(vid, "verified", uid, n, p),
+                                    ),
+                                    ft.OutlinedButton(
+                                        "Reject",
+                                        icon=ft.Icons.CLOSE,
+                                        height=32,
+                                        style=ft.ButtonStyle(
+                                            color="#F44336",
+                                            shape=ft.RoundedRectangleBorder(radius=6),
+                                            padding=ft.padding.symmetric(horizontal=12),
+                                        ),
+                                        on_click=lambda e, vid=ver_id, uid=user_id, n=name, p=position: self._update_verification_status(vid, "rejected", uid, n, p),
+                                    ),
+                                    ft.OutlinedButton(
+                                        "Pending",
+                                        icon=ft.Icons.PENDING,
+                                        height=32,
+                                        style=ft.ButtonStyle(
+                                            color="#FF9800",
+                                            shape=ft.RoundedRectangleBorder(radius=6),
+                                            padding=ft.padding.symmetric(horizontal=12),
+                                        ),
+                                        on_click=lambda e, vid=ver_id, uid=user_id, n=name, p=position: self._update_verification_status(vid, "pending", uid, n, p),
+                                    ),
+                                ],
+                                spacing=8,
+                            ),
+                        ],
+                    ),
+                    padding=12,
+                    bgcolor="#FAFAFA",
+                    border_radius=8,
+                    margin=ft.margin.only(bottom=8),
+                )
+            )
+        
+        # If no verifications, show message
+        if not verification_items:
+            verification_items.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Icon(ft.Icons.INFO_OUTLINE, color="#999999", size=32),
+                            ft.Text("No achievements submitted", color="#666666", size=12),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=8,
+                    ),
+                    padding=24,
+                    alignment=ft.alignment.center,
+                )
+            )
+        
+        # Create dialog
+        self.edit_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.EDIT, color="#5C6BC0", size=24),
+                    ft.Column(
+                        [
+                            ft.Text(f"Edit Candidate: {name}", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text(position, size=12, color="#666666"),
+                        ],
+                        spacing=2,
+                    ),
+                ],
+                spacing=12,
+            ),
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text("Achievement Verifications", size=14, weight=ft.FontWeight.W_500),
+                        ft.Container(height=8),
+                        ft.Column(
+                            verification_items,
+                            scroll=ft.ScrollMode.AUTO,
+                        ),
+                    ],
+                    spacing=8,
+                ),
+                width=500,
+                height=400,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=self._close_edit_dialog),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        if self.page:
+            self.page.overlay.append(self.edit_dialog)
+            self.edit_dialog.open = True
+            self.page.update()
+    
+    def _update_verification_status(self, verification_id, status, user_id, name, position):
+        """Update verification status and refresh dialog"""
+        if self.db:
+            self.db.verify_achievement(verification_id, self.current_user_id, status)
+        
+        # Close current dialog and reopen with updated data
+        self._close_edit_dialog(None)
+        self._show_edit_candidate_dialog(user_id, name, position)
+        
+        # Also rebuild main UI to reflect changes
+        self._build_ui()
+    
+    def _close_edit_dialog(self, e):
+        """Close the edit dialog"""
+        if self.edit_dialog and self.page:
+            self.edit_dialog.open = False
             self.page.update()
