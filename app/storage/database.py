@@ -191,6 +191,22 @@ class Database:
             )
         ''')
         
+        # Create news_posts table for updates from politicians, NBI, and COMELEC
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS news_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                author_id INTEGER NOT NULL,
+                author_role TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                category TEXT DEFAULT 'general',
+                is_pinned BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (author_id) REFERENCES users(id)
+            )
+        ''')
+        
         self.connection.commit()
     
     def hash_password(self, password):
@@ -1099,6 +1115,113 @@ class Database:
         
             self.cursor.execute(base_query, params)
             return self.cursor.fetchall()
+    
+    # =====================
+    # News Feed Methods
+    # =====================
+    
+    def create_news_post(self, author_id, author_role, title, content, category='general', is_pinned=False):
+        """Create a news post (for politicians, NBI, COMELEC)"""
+        with Database._db_lock:
+            try:
+                self.cursor.execute('''
+                    INSERT INTO news_posts (author_id, author_role, title, content, category, is_pinned)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (author_id, author_role, title, content, category, is_pinned))
+                self.connection.commit()
+                return self.cursor.lastrowid
+            except Exception as e:
+                print(f"Error creating news post: {e}")
+                return None
+    
+    def get_news_posts(self, limit=50, offset=0, category=None, author_role=None):
+        """Get news posts for the feed (voters view)"""
+        with Database._db_lock:
+            query = '''
+                SELECT np.id, np.author_id, np.author_role, np.title, np.content, 
+                       np.category, np.is_pinned, np.created_at, np.updated_at,
+                       u.username, u.full_name, u.profile_image, u.position, u.party
+                FROM news_posts np
+                JOIN users u ON np.author_id = u.id
+                WHERE 1=1
+            '''
+            params = []
+            
+            if category:
+                query += " AND np.category = ?"
+                params.append(category)
+            
+            if author_role:
+                query += " AND np.author_role = ?"
+                params.append(author_role)
+            
+            # Pinned posts first, then by date
+            query += " ORDER BY np.is_pinned DESC, np.created_at DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+            
+            self.cursor.execute(query, params)
+            results = self.cursor.fetchall()
+            
+            return [{
+                "id": r[0],
+                "author_id": r[1],
+                "author_role": r[2],
+                "title": r[3],
+                "content": r[4],
+                "category": r[5],
+                "is_pinned": bool(r[6]),
+                "created_at": r[7],
+                "updated_at": r[8],
+                "author_username": r[9],
+                "author_name": r[10] or r[9],
+                "author_image": r[11],
+                "author_position": r[12],
+                "author_party": r[13],
+            } for r in results]
+    
+    def get_news_posts_by_author(self, author_id, limit=20):
+        """Get news posts by a specific author"""
+        with Database._db_lock:
+            self.cursor.execute('''
+                SELECT id, title, content, category, is_pinned, created_at, updated_at
+                FROM news_posts
+                WHERE author_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (author_id, limit))
+            return self.cursor.fetchall()
+    
+    def update_news_post(self, post_id, title, content, category=None, is_pinned=None):
+        """Update a news post"""
+        with Database._db_lock:
+            try:
+                updates = ["title = ?", "content = ?", "updated_at = CURRENT_TIMESTAMP"]
+                params = [title, content]
+                
+                if category is not None:
+                    updates.append("category = ?")
+                    params.append(category)
+                
+                if is_pinned is not None:
+                    updates.append("is_pinned = ?")
+                    params.append(is_pinned)
+                
+                params.append(post_id)
+                
+                self.cursor.execute(f'''
+                    UPDATE news_posts SET {", ".join(updates)} WHERE id = ?
+                ''', params)
+                self.connection.commit()
+                return True
+            except Exception as e:
+                print(f"Error updating news post: {e}")
+                return False
+    
+    def delete_news_post(self, post_id):
+        """Delete a news post"""
+        with Database._db_lock:
+            self.cursor.execute('DELETE FROM news_posts WHERE id = ?', (post_id,))
+            self.connection.commit()
     
     def close(self):
         """Close database connection"""

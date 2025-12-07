@@ -1,5 +1,6 @@
 import flet as ft
 from datetime import datetime
+from app.components.news_post_creator import NewsPostCreator, MyPostsList
 
 
 class PoliticianDashboard(ft.Column):
@@ -181,6 +182,9 @@ class PoliticianDashboard(ft.Column):
                 ft.Container(height=20),
                 # Achievements Section
                 self._build_achievements_section(),
+                ft.Container(height=20),
+                # News Post Creator
+                self._build_news_section(),
             ],
         )
     
@@ -968,3 +972,49 @@ class PoliticianDashboard(ft.Column):
                     )
                     self.page.snack_bar.open = True
                     self.page.update()
+    
+    def _build_news_section(self):
+        """Build news post creator section for campaign updates"""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "Campaign Updates",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "Share campaign updates and news with voters",
+                        size=12,
+                        color="#666666",
+                    ),
+                    ft.Container(height=16),
+                    NewsPostCreator(
+                        db=self.db,
+                        author_id=self.user_id,
+                        author_role="politician",
+                        on_post_created=self._on_news_post_created,
+                    ),
+                    ft.Container(height=16),
+                    MyPostsList(
+                        db=self.db,
+                        author_id=self.user_id,
+                    ),
+                ],
+            ),
+            padding=24,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+            ),
+        )
+    
+    def _on_news_post_created(self):
+        """Handle news post created event"""
+        # Rebuild UI to show updated posts
+        self._build_ui()
+        if self.page:
+            self.page.update()

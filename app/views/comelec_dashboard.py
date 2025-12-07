@@ -1,4 +1,5 @@
 import flet as ft
+from app.components.news_post_creator import NewsPostCreator, MyPostsList
 
 
 class ComelecDashboard(ft.Column):
@@ -138,6 +139,9 @@ class ComelecDashboard(ft.Column):
                 ft.Container(height=20),
                 # Pending Achievement Verifications
                 self._build_pending_verifications(),
+                ft.Container(height=20),
+                # News Post Creator
+                self._build_news_section(),
             ],
         )
     
@@ -615,6 +619,52 @@ class ComelecDashboard(ft.Column):
             self._build_ui()
             if self.page:
                 self.page.update()
+    
+    def _build_news_section(self):
+        """Build news post creator section for COMELEC announcements"""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "News & Announcements",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "Create election updates and announcements for voters",
+                        size=12,
+                        color="#666666",
+                    ),
+                    ft.Container(height=16),
+                    NewsPostCreator(
+                        db=self.db,
+                        author_id=self.current_user_id,
+                        author_role="comelec",
+                        on_post_created=self._on_news_post_created,
+                    ),
+                    ft.Container(height=16),
+                    MyPostsList(
+                        db=self.db,
+                        author_id=self.current_user_id,
+                    ),
+                ],
+            ),
+            padding=24,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+            ),
+        )
+    
+    def _on_news_post_created(self):
+        """Handle news post created event"""
+        # Rebuild UI to show updated posts
+        self._build_ui()
+        if self.page:
+            self.page.update()
     
     def _toggle_voting(self):
         """Toggle voting status"""

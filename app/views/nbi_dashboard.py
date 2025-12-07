@@ -1,5 +1,6 @@
 import flet as ft
 from datetime import datetime
+from app.components.news_post_creator import NewsPostCreator, MyPostsList
 
 
 class NBIDashboard(ft.Column):
@@ -127,6 +128,9 @@ class NBIDashboard(ft.Column):
                 ft.Container(height=20),
                 # Politician Records List
                 self._build_politician_records(),
+                ft.Container(height=20),
+                # News Post Creator
+                self._build_news_section(),
             ],
         )
     
@@ -811,6 +815,52 @@ class NBIDashboard(ft.Column):
             "rejected": "#F44336",
         }
         return status_colors.get(status.lower(), "#9E9E9E")
+    
+    def _build_news_section(self):
+        """Build news post creator section for NBI announcements"""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "News & Legal Updates",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "Create legal updates and announcements for voters",
+                        size=12,
+                        color="#666666",
+                    ),
+                    ft.Container(height=16),
+                    NewsPostCreator(
+                        db=self.db,
+                        author_id=self.current_user_id,
+                        author_role="nbi",
+                        on_post_created=self._on_news_post_created,
+                    ),
+                    ft.Container(height=16),
+                    MyPostsList(
+                        db=self.db,
+                        author_id=self.current_user_id,
+                    ),
+                ],
+            ),
+            padding=24,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=4,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+            ),
+        )
+    
+    def _on_news_post_created(self):
+        """Handle news post created event"""
+        # Rebuild UI to show updated posts
+        self._build_ui()
+        if self.page:
+            self.page.update()
     
     def _refresh_records(self):
         """Refresh the records list"""

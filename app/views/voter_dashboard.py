@@ -1,4 +1,5 @@
 import flet as ft
+from app.components.news_feed import NewsFeed
 
 
 class VoterDashboard(ft.Column):
@@ -15,12 +16,14 @@ class VoterDashboard(ft.Column):
         self.search_query = ""
         self.selected_for_compare = None  # Single candidate selected for comparison {"id": x, "position": y}
         self.compare_mode = False  # When true, filter to same position only
+        self.current_tab = "candidates"  # "candidates" or "news"
         
         # UI component references for dynamic updates
         self.search_field = None
         self.candidate_grid_container = None
         self.compare_banner_container = None
         self.content_column = None
+        self.news_feed = None
         
         # Get voting status
         self.voting_active = self._get_voting_status()
@@ -63,12 +66,19 @@ class VoterDashboard(ft.Column):
     
     def _build_ui(self):
         """Build the main UI"""
+        # Determine content based on current tab
+        if self.current_tab == "news":
+            main_content = self._build_news_feed_content()
+        else:
+            main_content = self._build_candidates_content()
+        
         self.controls = [
             self._build_header(),
+            self._build_tab_bar(),
             ft.Container(
                 content=ft.Column(
                     [
-                        self._build_content(),
+                        main_content,
                     ],
                     scroll=ft.ScrollMode.AUTO,
                     expand=True,
@@ -81,6 +91,54 @@ class VoterDashboard(ft.Column):
         
         self.expand = True
         self.spacing = 0
+    
+    def _build_news_feed_content(self):
+        """Build the news feed tab content"""
+        self.news_feed = NewsFeed(self.db)
+        return self.news_feed
+    
+    def _build_candidates_content(self):
+        """Build the candidates tab content (original _build_content)"""
+        # Get filtered politicians
+        politicians = self._get_filtered_politicians()
+        
+        # Create search bar with stored reference
+        self.search_field = ft.TextField(
+            hint_text="Search candidates by name, position, or party...",
+            prefix_icon=ft.Icons.SEARCH,
+            border_radius=8,
+            height=45,
+            bgcolor=ft.Colors.WHITE,
+            border_color="#E0E0E0",
+            focused_border_color="#5C6BC0",
+            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            on_change=self._on_search_change,
+            value=self.search_query,
+            disabled=self.compare_mode,
+        )
+        
+        search_container = ft.Container(content=self.search_field)
+        
+        # Compare banner container (initially empty or with banner)
+        self.compare_banner_container = ft.Container(
+            content=self._build_compare_banner() if self.compare_mode and self.selected_for_compare else None,
+            margin=ft.margin.only(bottom=20) if self.compare_mode else None,
+        )
+        
+        # Candidate grid container with stored reference
+        self.candidate_grid_container = ft.Container(
+            content=self._build_candidate_grid(politicians),
+        )
+        
+        # Store reference to content column for updates
+        self.content_column = ft.Column([
+            search_container,
+            ft.Container(height=20),
+            self.compare_banner_container,
+            self.candidate_grid_container,
+        ])
+        
+        return self.content_column
     
     def _build_header(self):
         """Build the header with HonestBallot branding"""
@@ -155,48 +213,55 @@ class VoterDashboard(ft.Column):
             border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
         )
     
-    def _build_content(self):
-        """Build main content area"""
-        # Get filtered politicians
-        politicians = self._get_filtered_politicians()
+    def _build_tab_bar(self):
+        """Build the tab bar for switching between Candidates and News Feed"""
+        def create_tab(icon, label, tab_id):
+            is_selected = self.current_tab == tab_id
+            return ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Icon(
+                            icon,
+                            color="#5C6BC0" if is_selected else ft.Colors.GREY_600,
+                            size=20,
+                        ),
+                        ft.Text(
+                            label,
+                            size=14,
+                            weight=ft.FontWeight.W_600 if is_selected else ft.FontWeight.NORMAL,
+                            color="#5C6BC0" if is_selected else ft.Colors.GREY_600,
+                        ),
+                    ],
+                    spacing=8,
+                ),
+                padding=ft.padding.symmetric(horizontal=20, vertical=12),
+                border=ft.border.only(
+                    bottom=ft.BorderSide(3, "#5C6BC0") if is_selected else None
+                ),
+                on_click=lambda e, t=tab_id: self._switch_tab(t),
+                ink=True,
+            )
         
-        # Create search bar with stored reference
-        self.search_field = ft.TextField(
-            hint_text="Search candidates by name, position, or party...",
-            prefix_icon=ft.Icons.SEARCH,
-            border_radius=8,
-            height=45,
+        return ft.Container(
+            content=ft.Row(
+                [
+                    create_tab(ft.Icons.PEOPLE, "Candidates", "candidates"),
+                    create_tab(ft.Icons.NEWSPAPER, "News Feed", "news"),
+                ],
+                spacing=0,
+            ),
             bgcolor=ft.Colors.WHITE,
-            border_color="#E0E0E0",
-            focused_border_color="#5C6BC0",
-            content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
-            on_change=self._on_search_change,
-            value=self.search_query,
-            disabled=self.compare_mode,
+            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            padding=ft.padding.only(left=24),
         )
-        
-        search_container = ft.Container(content=self.search_field)
-        
-        # Compare banner container (initially empty or with banner)
-        self.compare_banner_container = ft.Container(
-            content=self._build_compare_banner() if self.compare_mode and self.selected_for_compare else None,
-            margin=ft.margin.only(bottom=20) if self.compare_mode else None,
-        )
-        
-        # Candidate grid container with stored reference
-        self.candidate_grid_container = ft.Container(
-            content=self._build_candidate_grid(politicians),
-        )
-        
-        # Store reference to content column for updates
-        self.content_column = ft.Column([
-            search_container,
-            ft.Container(height=20),
-            self.compare_banner_container,
-            self.candidate_grid_container,
-        ])
-        
-        return self.content_column
+    
+    def _switch_tab(self, tab_id):
+        """Switch between tabs"""
+        if self.current_tab != tab_id:
+            self.current_tab = tab_id
+            self._build_ui()
+            if self.page:
+                self.page.update()
     
     def _get_filtered_politicians(self):
         """Get politicians filtered by search query and compare mode"""
