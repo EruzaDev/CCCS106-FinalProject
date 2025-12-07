@@ -5,23 +5,23 @@ import os
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from pages.login_page import LoginPage
-from pages.signup_page import SignupPage
-from pages.home_page import HomePage
-from pages.settings_page import SettingsPage
-from pages.profile_page import ProfilePage
-from pages.comelec_dashboard import ComelecDashboard
-from pages.user_management import UserManagement
-from pages.election_results import ElectionResults
-from pages.voter_dashboard import VoterDashboard
-from pages.politician_profile import PoliticianProfile
-from pages.candidate_comparison import CandidateComparison
-from pages.voting_page import VotingPage
-from pages.politician_dashboard import PoliticianDashboard
-from pages.nbi_dashboard import NBIDashboard
-from pages.audit_log_page import AuditLogPage
-from models.database import init_demo_data
-from models.session_manager import SessionManager
+from app.views.login_page import LoginPage
+from app.views.signup_page import SignupPage
+from app.views.home_page import HomePage
+from app.views.settings_page import SettingsPage
+from app.views.profile_page import ProfilePage
+from app.views.comelec_dashboard import ComelecDashboard
+from app.views.user_management import UserManagement
+from app.views.election_results import ElectionResults
+from app.views.voter_dashboard import VoterDashboard
+from app.views.politician_profile import PoliticianProfile
+from app.views.candidate_comparison import CandidateComparison
+from app.views.voting_page import VotingPage
+from app.views.politician_dashboard import PoliticianDashboard
+from app.views.nbi_dashboard import NBIDashboard
+from app.views.audit_log_page import AuditLogPage
+from app.storage.database import init_demo_data
+from app.state.session_manager import SessionManager
 
 
 class HonestBallotApp:
