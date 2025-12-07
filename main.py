@@ -18,6 +18,7 @@ from pages.politician_profile import PoliticianProfile
 from pages.candidate_comparison import CandidateComparison
 from pages.voting_page import VotingPage
 from pages.politician_dashboard import PoliticianDashboard
+from pages.nbi_dashboard import NBIDashboard
 from models.database import init_demo_data
 from models.session_manager import SessionManager
 
@@ -203,6 +204,24 @@ class HonestBallotApp:
         self.page.add(dashboard)
         self.page.update()
     
+    def show_nbi_dashboard(self):
+        """Show the NBI Officer dashboard"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        dashboard = NBIDashboard(
+            username=self.current_session["username"],
+            db=self.db,
+            on_logout=self.handle_logout,
+            current_user_id=self.current_session["user_id"],
+        )
+        
+        self.page.add(dashboard)
+        self.page.update()
+    
     def show_election_results(self):
         """Show the Election Results page"""
         self.page.clean()
@@ -279,6 +298,8 @@ class HonestBallotApp:
             # Route based on role
             if user["role"] == "comelec":
                 self.show_comelec_dashboard()
+            elif user["role"] == "nbi":
+                self.show_nbi_dashboard()
             elif user["role"] == "politician":
                 self.show_politician_dashboard()
             else:

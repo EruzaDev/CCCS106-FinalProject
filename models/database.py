@@ -122,6 +122,26 @@ class Database:
             )
         ''')
         
+        # Create legal records table (NBI)
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS legal_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                politician_id INTEGER NOT NULL,
+                record_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                record_date TEXT,
+                status TEXT DEFAULT 'pending',
+                added_by INTEGER,
+                verified_by INTEGER,
+                verified_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (politician_id) REFERENCES users(id),
+                FOREIGN KEY (added_by) REFERENCES users(id),
+                FOREIGN KEY (verified_by) REFERENCES users(id)
+            )
+        ''')
+        
         self.connection.commit()
     
     def hash_password(self, password):
@@ -561,6 +581,106 @@ class Database:
             }
         return None
     
+    # Legal Records Methods (NBI)
+    def create_legal_record(self, politician_id, record_type, title, description, date, added_by):
+        """Create a new legal record for a politician"""
+        try:
+            self.cursor.execute('''
+                INSERT INTO legal_records (politician_id, record_type, title, description, record_date, status, added_by)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?)
+            ''', (politician_id, record_type, title, description, date, added_by))
+            self.connection.commit()
+            return self.cursor.lastrowid
+        except sqlite3.IntegrityError:
+            return None
+    
+    def get_all_legal_records(self):
+        """Get all legal records with politician info"""
+        self.cursor.execute('''
+            SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
+                   lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
+            FROM legal_records lr
+            JOIN users u ON lr.politician_id = u.id
+            ORDER BY lr.created_at DESC
+        ''')
+        return self.cursor.fetchall()
+    
+    def get_legal_records_by_politician(self, politician_id):
+        """Get all legal records for a specific politician"""
+        self.cursor.execute('''
+            SELECT id, record_type, title, description, record_date, status, created_at
+            FROM legal_records
+            WHERE politician_id = ?
+            ORDER BY created_at DESC
+        ''', (politician_id,))
+        return self.cursor.fetchall()
+    
+    def update_legal_record_status(self, record_id, status, verified_by):
+        """Update the status of a legal record"""
+        self.cursor.execute('''
+            UPDATE legal_records 
+            SET status = ?, verified_by = ?, verified_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (status, verified_by, record_id))
+        self.connection.commit()
+    
+    def update_legal_record(self, record_id, record_type, title, description, date):
+        """Update a legal record's details"""
+        try:
+            self.cursor.execute('''
+                UPDATE legal_records 
+                SET record_type = ?, title = ?, description = ?, record_date = ?
+                WHERE id = ?
+            ''', (record_type, title, description, date, record_id))
+            self.connection.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating legal record: {e}")
+            return False
+    
+    def get_legal_record_by_id(self, record_id):
+        """Get a single legal record by ID"""
+        self.cursor.execute('''
+            SELECT id, politician_id, record_type, title, description, record_date, status
+            FROM legal_records
+            WHERE id = ?
+        ''', (record_id,))
+        return self.cursor.fetchone()
+    
+    def delete_legal_record(self, record_id):
+        """Delete a legal record"""
+        self.cursor.execute('DELETE FROM legal_records WHERE id = ?', (record_id,))
+        self.connection.commit()
+    
+    def get_legal_records_stats(self):
+        """Get statistics about legal records"""
+        # Total records
+        self.cursor.execute('SELECT COUNT(*) FROM legal_records')
+        total = self.cursor.fetchone()[0]
+        
+        # Verified records
+        self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'verified'")
+        verified = self.cursor.fetchone()[0]
+        
+        # Pending records
+        self.cursor.execute("SELECT COUNT(*) FROM legal_records WHERE status = 'pending'")
+        pending = self.cursor.fetchone()[0]
+        
+        return {"total": total, "verified": verified, "pending": pending}
+    
+    def search_legal_records(self, query):
+        """Search legal records by politician name or record title"""
+        search_term = f"%{query}%"
+        self.cursor.execute('''
+            SELECT lr.id, lr.politician_id, lr.record_type, lr.title, lr.description, 
+                   lr.record_date, lr.status, lr.created_at, u.full_name, u.username, u.position, u.party, u.profile_image
+            FROM legal_records lr
+            JOIN users u ON lr.politician_id = u.id
+            WHERE u.full_name LIKE ? OR u.username LIKE ? OR lr.title LIKE ?
+            ORDER BY lr.created_at DESC
+        ''', (search_term, search_term, search_term))
+        return self.cursor.fetchall()
+    
     def close(self):
         """Close database connection"""
         if self.connection:
@@ -645,5 +765,31 @@ def init_demo_data():
                     "Implemented scholarship programs for underprivileged students.",
                     None
                 )
+    
+    # Create sample legal records for politicians
+    nbi_user = db.cursor.execute("SELECT id FROM users WHERE role = 'nbi' LIMIT 1").fetchone()
+    nbi_user_id = nbi_user[0] if nbi_user else None
+    
+    if politicians and nbi_user_id:
+        # Sample legal records data
+        legal_records_data = [
+            # Roberto Cruz - Governor candidate
+            (politicians[0][0], "Conflict of Interest Allegation", "Conflict of Interest Allegation", 
+             "Alleged involvement in awarding contracts to family-owned businesses. Investigation ongoing.", 
+             "1/10/2024", "pending"),
+            # Miguel Reyes - Senator candidate
+            (politicians[5][0] if len(politicians) > 5 else politicians[0][0], "Libel Case (Dismissed)", "Libel Case (Dismissed)", 
+             "Filed by business mogul. Case dismissed due to lack of evidence.", 
+             "3/10/2021", "dismissed"),
+            # Antonio Mendoza - Mayor candidate
+            (politicians[3][0] if len(politicians) > 3 else politicians[0][0], "Tax Compliance Issue", "Tax Compliance Issue", 
+             "Settled previous tax discrepancies from business operations. All penalties paid.", 
+             "3/10/2020", "verified"),
+        ]
+        
+        for pol_id, record_type, title, description, date, status in legal_records_data:
+            record_id = db.create_legal_record(pol_id, record_type, title, description, date, nbi_user_id)
+            if record_id and status != "pending":
+                db.update_legal_record_status(record_id, status, nbi_user_id)
     
     return db  # Return the open database connection
