@@ -5,12 +5,22 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+# Import configuration
+try:
+    from app.config import Config
+except ImportError:
+    # Fallback for direct module execution
+    Config = None
+
 
 class Database:
     """Local SQLite database manager for the voting application"""
     
-    def __init__(self, db_name="voting_app.db"):
+    def __init__(self, db_name=None):
         """Initialize database connection"""
+        # Use config if available, otherwise use default
+        if db_name is None:
+            db_name = Config.DATABASE_NAME if Config else "voting_app.db"
         self.db_path = Path(db_name)
         self.connection = None
         self.cursor = None
@@ -622,8 +632,14 @@ class Database:
         return None
     
     # Credential Stuffing Protection Methods
-    MAX_LOGIN_ATTEMPTS = 5
-    LOCKOUT_DURATION_MINUTES = 15
+    # Use config values if available, otherwise use defaults
+    @property
+    def MAX_LOGIN_ATTEMPTS(self):
+        return Config.MAX_LOGIN_ATTEMPTS if Config else 5
+    
+    @property
+    def LOCKOUT_DURATION_MINUTES(self):
+        return Config.LOCKOUT_DURATION_MINUTES if Config else 15
     
     def record_login_attempt(self, identifier, success=False, ip_address=None):
         """Record a login attempt for rate limiting"""

@@ -3,3 +3,20 @@
 *.pyo
 
 venv/
+.venv/
+
+# Environment files with secrets
+.env
+*.env.local
+
+# Database files
+*.db
+
+# Log files
+*.log
+app.log
+
+# IDE
+.vscode/
+.idea/
+

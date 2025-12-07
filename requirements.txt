@@ -1,2 +1,5 @@
 flet>=0.28.3
 bcrypt>=4.0.0
+
+# Testing
+pytest>=8.0.0
