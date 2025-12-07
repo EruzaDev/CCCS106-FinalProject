@@ -33,10 +33,16 @@ class VoterDashboard(ft.Column):
         
         # Build UI
         self._build_ui()
-        
+    
+    def did_mount(self):
+        """Called when the control is added to the page - start polling here"""
         # Start polling for voting status if not already active
         if not self.voting_active:
             self._start_voting_poll()
+    
+    def will_unmount(self):
+        """Called when the control is about to be removed - stop polling"""
+        self.stop_polling()
     
     def _get_voting_status(self):
         """Get current voting status from database"""
@@ -578,11 +584,11 @@ class VoterDashboard(ft.Column):
                         self._polling_active = False
                         self.voting_active = True
                         if self.on_voting_started and self.page:
-                            # Schedule callback on the main thread
-                            self.page.run_task(self.on_voting_started)
+                            # Call directly - show_home_page handles page.clean() and update()
+                            self.on_voting_started()
                         break
-                except Exception:
-                    pass  # Ignore errors during polling
+                except Exception as e:
+                    print(f"Polling error: {e}")  # Debug
         
         self._polling_thread = threading.Thread(target=poll_voting_status, daemon=True)
         self._polling_thread.start()
