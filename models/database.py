@@ -142,6 +142,24 @@ class Database:
             )
         ''')
         
+        # Create audit logs table
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                description TEXT,
+                user_id INTEGER,
+                user_role TEXT,
+                target_type TEXT,
+                target_id INTEGER,
+                details TEXT,
+                ip_address TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
         self.connection.commit()
     
     def hash_password(self, password):
@@ -679,6 +697,141 @@ class Database:
             WHERE u.full_name LIKE ? OR u.username LIKE ? OR lr.title LIKE ?
             ORDER BY lr.created_at DESC
         ''', (search_term, search_term, search_term))
+        return self.cursor.fetchall()
+    
+    # =====================
+    # Audit Log Methods
+    # =====================
+    
+    def log_action(self, action, action_type, description=None, user_id=None, user_role=None, 
+                   target_type=None, target_id=None, details=None, ip_address=None):
+        """Log an action to the audit log"""
+        try:
+            details_json = json.dumps(details) if details else None
+            self.cursor.execute('''
+                INSERT INTO audit_logs (action, action_type, description, user_id, user_role, 
+                                       target_type, target_id, details, ip_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (action, action_type, description, user_id, user_role, 
+                  target_type, target_id, details_json, ip_address))
+            self.connection.commit()
+            return self.cursor.lastrowid
+        except Exception as e:
+            print(f"Error logging action: {e}")
+            return None
+    
+    def get_audit_logs(self, limit=100, offset=0, action_type=None, user_role=None):
+        """Get audit logs with optional filtering"""
+        query = '''
+            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                   al.user_role, al.target_type, al.target_id, al.details, 
+                   al.ip_address, al.created_at, u.username, u.full_name
+            FROM audit_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            WHERE 1=1
+        '''
+        params = []
+        
+        if action_type:
+            query += " AND al.action_type = ?"
+            params.append(action_type)
+        
+        if user_role:
+            query += " AND al.user_role = ?"
+            params.append(user_role)
+        
+        query += " ORDER BY al.created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def get_audit_logs_for_role(self, viewer_role, limit=100, offset=0):
+        """Get audit logs filtered by what a role is allowed to see"""
+        # Define what each role can see
+        role_permissions = {
+            'comelec': ['all'],  # COMELEC can see everything
+            'nbi': ['legal_record', 'login', 'logout'],  # NBI sees legal records and auth
+            'politician': ['verification', 'legal_record', 'vote_result'],  # Politicians see their related logs
+        }
+        
+        allowed_types = role_permissions.get(viewer_role, [])
+        
+        if 'all' in allowed_types:
+            return self.get_audit_logs(limit, offset)
+        
+        if not allowed_types:
+            return []
+        
+        placeholders = ','.join(['?' for _ in allowed_types])
+        query = f'''
+            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                   al.user_role, al.target_type, al.target_id, al.details, 
+                   al.ip_address, al.created_at, u.username, u.full_name
+            FROM audit_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            WHERE al.action_type IN ({placeholders})
+            ORDER BY al.created_at DESC
+            LIMIT ? OFFSET ?
+        '''
+        params = allowed_types + [limit, offset]
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def get_audit_log_stats(self):
+        """Get audit log statistics"""
+        stats = {}
+        
+        # Total logs
+        self.cursor.execute("SELECT COUNT(*) FROM audit_logs")
+        stats['total'] = self.cursor.fetchone()[0]
+        
+        # Logs by action type
+        self.cursor.execute('''
+            SELECT action_type, COUNT(*) FROM audit_logs 
+            GROUP BY action_type ORDER BY COUNT(*) DESC
+        ''')
+        stats['by_type'] = self.cursor.fetchall()
+        
+        # Logs today
+        self.cursor.execute('''
+            SELECT COUNT(*) FROM audit_logs 
+            WHERE DATE(created_at) = DATE('now')
+        ''')
+        stats['today'] = self.cursor.fetchone()[0]
+        
+        return stats
+    
+    def search_audit_logs(self, query, viewer_role=None, limit=100):
+        """Search audit logs by action, description, or username"""
+        search_term = f"%{query}%"
+        
+        base_query = '''
+            SELECT al.id, al.action, al.action_type, al.description, al.user_id, 
+                   al.user_role, al.target_type, al.target_id, al.details, 
+                   al.ip_address, al.created_at, u.username, u.full_name
+            FROM audit_logs al
+            LEFT JOIN users u ON al.user_id = u.id
+            WHERE (al.action LIKE ? OR al.description LIKE ? OR u.username LIKE ? OR u.full_name LIKE ?)
+        '''
+        params = [search_term, search_term, search_term, search_term]
+        
+        # Apply role-based filtering
+        if viewer_role and viewer_role != 'comelec':
+            role_permissions = {
+                'nbi': ['legal_record', 'login', 'logout'],
+                'politician': ['verification', 'legal_record', 'vote_result'],
+            }
+            allowed_types = role_permissions.get(viewer_role, [])
+            if allowed_types:
+                placeholders = ','.join(['?' for _ in allowed_types])
+                base_query += f" AND al.action_type IN ({placeholders})"
+                params.extend(allowed_types)
+        
+        base_query += " ORDER BY al.created_at DESC LIMIT ?"
+        params.append(limit)
+        
+        self.cursor.execute(base_query, params)
         return self.cursor.fetchall()
     
     def close(self):

@@ -19,6 +19,7 @@ from pages.candidate_comparison import CandidateComparison
 from pages.voting_page import VotingPage
 from pages.politician_dashboard import PoliticianDashboard
 from pages.nbi_dashboard import NBIDashboard
+from pages.audit_log_page import AuditLogPage
 from models.database import init_demo_data
 from models.session_manager import SessionManager
 
@@ -175,6 +176,7 @@ class HonestBallotApp:
             username=self.current_session["username"],
             db=self.db,
             on_logout=self.handle_logout,
+            on_audit_log=self.show_audit_log,
         )
         
         # Add file picker to page overlay
@@ -199,6 +201,7 @@ class HonestBallotApp:
             on_election_results=self.show_election_results,
             on_candidates=lambda: self.show_error_dialog("Info", "Verified Candidates - Coming Soon"),
             current_user_id=self.current_session["user_id"],
+            on_audit_log=self.show_audit_log,
         )
         
         self.page.add(dashboard)
@@ -217,9 +220,40 @@ class HonestBallotApp:
             db=self.db,
             on_logout=self.handle_logout,
             current_user_id=self.current_session["user_id"],
+            on_audit_log=self.show_audit_log,
         )
         
         self.page.add(dashboard)
+        self.page.update()
+    
+    def show_audit_log(self):
+        """Show the Audit Log page"""
+        self.page.clean()
+        
+        if not self.current_session:
+            self.show_login_page()
+            return
+        
+        # Determine which dashboard to go back to
+        role = self.current_session["role"]
+        if role == "comelec":
+            on_back = self.show_comelec_dashboard
+        elif role == "nbi":
+            on_back = self.show_nbi_dashboard
+        elif role == "politician":
+            on_back = self.show_politician_dashboard
+        else:
+            on_back = self.show_home_page
+        
+        audit_page = AuditLogPage(
+            username=self.current_session["username"],
+            db=self.db,
+            user_role=role,
+            on_back=on_back,
+            current_user_id=self.current_session["user_id"],
+        )
+        
+        self.page.add(audit_page)
         self.page.update()
     
     def show_election_results(self):
@@ -292,6 +326,15 @@ class HonestBallotApp:
                 "role": user["role"]
             }
             
+            # Log the login action
+            self.db.log_action(
+                action=f"User {user['username']} logged in",
+                action_type="login",
+                description=f"Successful login for {user['email']}",
+                user_id=user["id"],
+                user_role=user["role"],
+            )
+            
             # Store in page session
             self.page.session.set("current_session", self.current_session)
             
@@ -335,6 +378,14 @@ class HonestBallotApp:
     def handle_logout(self):
         """Handle logout"""
         if self.current_session:
+            # Log the logout action
+            self.db.log_action(
+                action=f"User {self.current_session['username']} logged out",
+                action_type="logout",
+                description=f"User logged out",
+                user_id=self.current_session["user_id"],
+                user_role=self.current_session["role"],
+            )
             self.session_manager.end_session(self.current_session["token"])
         
         self.current_session = None

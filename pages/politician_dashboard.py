@@ -5,12 +5,13 @@ from datetime import datetime
 class PoliticianDashboard(ft.Column):
     """Politician Dashboard - View and manage politician profile and achievements"""
     
-    def __init__(self, user_id, username, db, on_logout):
+    def __init__(self, user_id, username, db, on_logout, on_audit_log=None):
         super().__init__()
         self.user_id = user_id
         self.username = username
         self.db = db
         self.on_logout = on_logout
+        self.on_audit_log = on_audit_log
         
         # Get politician data
         self.politician = self._get_politician_data()
@@ -136,6 +137,12 @@ class PoliticianDashboard(ft.Column):
                     ),
                     ft.Row(
                         [
+                            ft.IconButton(
+                                icon=ft.Icons.HISTORY,
+                                icon_color="#5C6BC0",
+                                tooltip="Audit Logs",
+                                on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
+                            ),
                             ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
                             ft.TextButton(
                                 "Logout",

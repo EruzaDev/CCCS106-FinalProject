@@ -5,12 +5,13 @@ from datetime import datetime
 class NBIDashboard(ft.Column):
     """NBI Dashboard - Main dashboard for NBI officers to manage legal records"""
     
-    def __init__(self, username, db, on_logout, current_user_id=None):
+    def __init__(self, username, db, on_logout, current_user_id=None, on_audit_log=None):
         super().__init__()
         self.username = username
         self.db = db
         self.on_logout = on_logout
         self.current_user_id = current_user_id
+        self.on_audit_log = on_audit_log
         
         # Dialog references
         self.add_record_dialog = None
@@ -89,6 +90,12 @@ class NBIDashboard(ft.Column):
                     ),
                     ft.Row(
                         [
+                            ft.IconButton(
+                                icon=ft.Icons.HISTORY,
+                                icon_color="#FF5722",
+                                tooltip="Audit Logs",
+                                on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
+                            ),
                             ft.Icon(ft.Icons.LOGOUT, color="#FF5722", size=18),
                             ft.TextButton(
                                 "Logout",
@@ -372,6 +379,16 @@ class NBIDashboard(ft.Column):
         )
         
         if record_id:
+            # Log the action
+            self.db.log_action(
+                action="Legal Record Added",
+                action_type="legal_record",
+                description=f"Added record: {self.record_title_field.value}",
+                user_id=self.current_user_id,
+                user_role="nbi",
+                target_type="politician",
+                target_id=int(self.politician_dropdown.value),
+            )
             self._hide_add_record_form(None)
             self._refresh_records()
             self._show_success("Record added successfully")

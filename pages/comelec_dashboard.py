@@ -4,7 +4,7 @@ import flet as ft
 class ComelecDashboard(ft.Column):
     """COMELEC Dashboard - Main dashboard for COMELEC administrators"""
     
-    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates, current_user_id=None):
+    def __init__(self, username, db, on_logout, on_user_management, on_election_results, on_candidates, current_user_id=None, on_audit_log=None):
         super().__init__()
         self.username = username
         self.db = db
@@ -13,6 +13,7 @@ class ComelecDashboard(ft.Column):
         self.on_election_results = on_election_results
         self.on_candidates = on_candidates
         self.current_user_id = current_user_id
+        self.on_audit_log = on_audit_log
         
         # Dialog reference
         self.edit_dialog = None
@@ -87,6 +88,12 @@ class ComelecDashboard(ft.Column):
                     ),
                     ft.Row(
                         [
+                            ft.IconButton(
+                                icon=ft.Icons.HISTORY,
+                                icon_color="#5C6BC0",
+                                tooltip="Audit Logs",
+                                on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
+                            ),
                             ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
                             ft.TextButton(
                                 "Logout",
@@ -607,8 +614,24 @@ class ComelecDashboard(ft.Column):
         if self.db:
             if self.voting_active:
                 self.db.stop_voting(self.current_user_id)
+                # Log the action
+                self.db.log_action(
+                    action="Voting Stopped",
+                    action_type="voting",
+                    description="COMELEC stopped the voting session",
+                    user_id=self.current_user_id,
+                    user_role="comelec",
+                )
             else:
                 self.db.start_voting(self.current_user_id)
+                # Log the action
+                self.db.log_action(
+                    action="Voting Started",
+                    action_type="voting",
+                    description="COMELEC started a new voting session",
+                    user_id=self.current_user_id,
+                    user_role="comelec",
+                )
         
         self.voting_active = not self.voting_active
         
