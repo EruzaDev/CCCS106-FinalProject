@@ -18,7 +18,8 @@ class Database:
     
     def initialize_db(self):
         """Initialize database and create tables if they don't exist"""
-        self.connection = sqlite3.connect(str(self.db_path))
+        # Enable check_same_thread=False to allow cross-thread access (safe for this app)
+        self.connection = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.cursor = self.connection.cursor()
         
         # Create users table
