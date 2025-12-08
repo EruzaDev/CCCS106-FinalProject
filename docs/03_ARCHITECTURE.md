@@ -2,8 +2,66 @@
 
 ## System Architecture Overview
 
-
-![alt text](images/Untitled.png)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           HONESTBALLOT SYSTEM                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         PRESENTATION LAYER                              │ │
+│  │                           (Flet Framework)                              │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │ │
+│  │  │  Login Page  │ │  Home Page   │ │ Profile Page │ │ Settings Page│  │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘  │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │ │
+│  │  │COMELEC Dash  │ │  NBI Dash    │ │ Analytics Pg │ │  Audit Logs  │  │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                          COMPONENT LAYER                                │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │ │
+│  │  │   Sidebar    │ │  Top Taskbar │ │  Post Cards  │ │    Charts    │  │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘  │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                      APPLICATION SERVICE LAYER                          │ │
+│  │  ┌─────────────────────────┐    ┌─────────────────────────────────┐   │ │
+│  │  │     Session Manager     │    │         AI Service              │   │ │
+│  │  │  • Create/Verify Session│    │  • Theme Extraction             │   │ │
+│  │  │  • Token Management     │    │  • Sentiment Analysis           │   │ │
+│  │  │  • Session Timeout      │    │  • Compatibility Scoring        │   │ │
+│  │  └─────────────────────────┘    │  • Candidate Recommendations    │   │ │
+│  │                                  └─────────────────────────────────┘   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                          DATA ACCESS LAYER                              │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐   │ │
+│  │  │                       Database Class                             │   │ │
+│  │  │  • User Operations (CRUD, Authentication)                        │   │ │
+│  │  │  • Voting Operations (Cast, Count, Results)                      │   │ │
+│  │  │  • Audit Logging (Log, Query, Filter)                            │   │ │
+│  │  │  • Legal Records (Create, Update, Verify)                        │   │ │
+│  │  │  • Election Management (Start, Stop, Status)                     │   │ │
+│  │  └─────────────────────────────────────────────────────────────────┘   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         PERSISTENCE LAYER                               │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐   │ │
+│  │  │                    SQLite Database                               │   │ │
+│  │  │                    (voting_app.db)                               │   │ │
+│  │  └─────────────────────────────────────────────────────────────────┘   │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Folder Structure
 
@@ -60,63 +118,55 @@ CCCS106-FinalProject/
 
 ## Technology Stack
 
-### Frontend/UI Layer
-| Technology | Description |
-|------------|-------------|
-| **Flet** | Python-based UI framework built on Flutter |
-| Material Design | Modern, responsive UI components |
-| Cross-platform | Runs on Windows, macOS, and Linux |
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     TECHNOLOGY STACK                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  FRONTEND/UI          BACKEND            EMERGING TECH       │
+│  ┌──────────────┐    ┌──────────────┐   ┌──────────────┐    │
+│  │    Flet      │    │   Python     │   │ Rule-Based   │    │
+│  │  (Flutter)   │    │   3.11+      │   │     AI       │    │
+│  │              │    │              │   │              │    │
+│  │ • Material   │    │ • SQLite     │   │ • NLP-like   │    │
+│  │   Design     │    │ • bcrypt     │   │   Analysis   │    │
+│  │ • Cross-     │    │ • hashlib    │   │ • Keyword    │    │
+│  │   platform   │    │ • UUID       │   │   Matching   │    │
+│  └──────────────┘    └──────────────┘   │ • Scoring    │    │
+│                                          │   Algorithms │    │
+│  DATA VIZ                                └──────────────┘    │
+│  ┌──────────────┐    TESTING                                 │
+│  │   Charts     │    ┌──────────────┐                        │
+│  │  (Custom)    │    │   pytest     │                        │
+│  │              │    │   unittest   │                        │
+│  │ • Bar Charts │    │   mock       │                        │
+│  │ • Donut      │    └──────────────┘                        │
+│  │ • Stat Cards │                                            │
+│  └──────────────┘                                            │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### Backend Layer
-| Technology | Purpose |
-|------------|----------|
-| **Python 3.11+** | Core programming language |
-| SQLite | Lightweight database engine |
-| bcrypt | Secure password hashing |
-| hashlib | SHA-256 for data integrity |
-| UUID | Session token generation |
+## Data Flow Diagram
 
-### Emerging Technology
-| Technology | Purpose |
-|------------|----------|
-| **Rule-Based AI** | Candidate analysis and matching |
-| NLP-like Analysis | Theme and sentiment extraction |
-| Keyword Matching | Policy area identification |
-| Scoring Algorithms | Compatibility calculations |
-
-### Data Visualization
-| Component | Description |
-|-----------|-------------|
-| Custom Charts | Built with Flet Canvas |
-| Bar Charts | Vote distribution display |
-| Donut Charts | Percentage breakdowns |
-| Stat Cards | Quick metrics display |
-
-### Testing
-| Tool | Purpose |
-|------|----------|
-| pytest | Test framework |
-| unittest | Python standard testing |
-| mock | Dependency mocking |
-
-## Data Flow
-
-### Request Flow
-1. **User Action** - User interacts with the application (click, form submission)
-2. **Flet UI Layer** - Captures the event and validates input
-3. **Service Layer** - Processes business logic and orchestrates operations
-4. **Database Layer** - Persists or retrieves data from SQLite
-
-### AI Integration Flow
-1. **Service Layer** sends candidate/voter data to **AI Service**
-2. **AI Service** performs theme extraction, sentiment analysis, and compatibility scoring
-3. Results are returned to the Service Layer for display
-
-### Response Flow
-1. **Database Layer** returns query results
-2. **Service Layer** combines data with AI insights
-3. **Flet UI Layer** renders updated UI, analytics, and recommendations
-4. **User** sees the response (candidate cards, charts, recommendations)
+```
+┌─────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────┐
+│  User   │────▶│  Flet UI    │────▶│   Service   │────▶│ Database │
+│ Action  │     │   Layer     │     │   Layer     │     │  Layer   │
+└─────────┘     └─────────────┘     └─────────────┘     └──────────┘
+                      │                    │                   │
+                      │                    ▼                   │
+                      │            ┌─────────────┐            │
+                      │            │ AI Service  │            │
+                      │            │ (Analysis)  │            │
+                      │            └─────────────┘            │
+                      │                    │                   │
+                      ▼                    ▼                   ▼
+               ┌─────────────────────────────────────────────────┐
+               │              Response to User                    │
+               │  (Updated UI, Analytics, Recommendations)        │
+               └─────────────────────────────────────────────────┘
+```
 
 ---
 

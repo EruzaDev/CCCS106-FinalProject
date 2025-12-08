@@ -39,13 +39,15 @@ python main.py
 
 ## 🏗️ Architecture Overview
 
-The HonestBallot application follows a layered architecture:
-
-| Layer | Components | Description |
-|-------|------------|-------------|
-| **UI Layer** | Flet Components | User interface built with Material Design |
-| **Service Layer** | AI Service, Session Manager | Business logic and AI analysis |
-| **Data Layer** | SQLite Database | Persistent storage for all application data |
+```
+┌─────────────────────────────────────┐
+│         Flet UI Layer               │
+├─────────────────────────────────────┤
+│    Services (AI, Sessions)          │
+├─────────────────────────────────────┤
+│    Database (SQLite)                │
+└─────────────────────────────────────┘
+```
 
 ## ✅ Submission Checklist
 
@@ -58,7 +60,7 @@ The HonestBallot application follows a layered architecture:
 - [x] Testing Summary
 - [x] Team Roles & Contribution Matrix
 - [x] Risk / Constraint Notes & Future Enhancements
-- [x] Individual Reflections
+- [ ] Individual Reflections (template provided - team members to complete)
 
 ---
 
