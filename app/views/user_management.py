@@ -492,7 +492,8 @@ class UserManagement(ft.Column):
             party_value = self.editing_user_data.get("party", "")
             username_value = self.editing_user_data.get("username", "")
             biography_value = self.editing_user_data.get("biography", "")
-            if self.editing_user_data.get("profile_image"):
+            # Only load existing image if no new image has been selected (indicated by politician_image_path)
+            if not self.politician_image_path and self.editing_user_data.get("profile_image"):
                 self.politician_image_data = self.editing_user_data.get("profile_image")
         
         self.politician_name_field = ft.TextField(
