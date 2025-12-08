@@ -20,3 +20,6 @@ app.log
 .vscode/
 .idea/
 
+voting_app.db
+honestballot.db
+*.db
