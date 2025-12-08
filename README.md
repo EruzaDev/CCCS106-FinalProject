@@ -202,7 +202,9 @@ This project is licensed under the MIT License.
 
 ## 👥 Authors
 
-- **EruzaDev** - Project Lead & Development
+- **C-jay B. Lavapie** - Product Lead / Vision & Feature Prioritization, Lead Developer (Flet Architecture), & Data & Integration Engineer (storage + emerging tech)
+- **John Paul Caldo** - UI/UX & Accessibility Designer, QA / Test Coordinator
+- **Marc Dexter Sael** - Documentation & Release Manager
 
 ---
 
