@@ -67,22 +67,15 @@
 
 ## Feature Categories Summary
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    HONESTBALLOT FEATURES                     │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐ │
-│  │   CORE VOTING   │  │   AI-ASSISTED   │  │  DATA VIZ   │ │
-│  │   (6 features)  │  │  (5 features)   │  │ (4 features)│ │
-│  └─────────────────┘  └─────────────────┘  └─────────────┘ │
-│  ┌─────────────────┐  ┌─────────────────┐                   │
-│  │  AUDIT/TRANS    │  │  USER MGMT      │                   │
-│  │  (5 features)   │  │  (4 features)   │                   │
-│  └─────────────────┘  └─────────────────┘                   │
-├─────────────────────────────────────────────────────────────┤
-│           TOTAL: 24 Features Implemented                     │
-└─────────────────────────────────────────────────────────────┘
-```
+**Total: 24 Features Implemented**
+
+| Category | Feature Count | Description |
+|----------|---------------|-------------|
+| Core Voting | 6 features | User registration, authentication, voting, duplicate prevention, voting control |
+| AI-Assisted | 5 features | Theme extraction, sentiment analysis, compatibility scoring, recommendations, insights |
+| Data Visualization | 4 features | Election statistics, bar charts, donut charts, analytics dashboard |
+| Audit & Transparency | 5 features | Audit logging, role-based log access, NBI records, verification, search |
+| User Management | 4 features | Profile management, session management, COMELEC dashboard, NBI dashboard |
 
 ---
 

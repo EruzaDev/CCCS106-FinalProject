@@ -56,35 +56,20 @@ HonestBallot is a secure electronic voting application built with the Flet frame
 
 ### 2.1 Validation Layers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    USER INPUT                                │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 1: UI Validation (Flet TextField constraints)        │
-│  - max_length limits                                         │
-│  - input_filter for allowed characters                       │
-│  - Required field enforcement                                │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 2: Application Validation (Python)                    │
-│  - Type checking                                             │
-│  - Format validation (email regex, password policy)          │
-│  - Business logic rules                                      │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Layer 3: Database Constraints                               │
-│  - Parameterized queries (SQL injection prevention)          │
-│  - UNIQUE constraints                                        │
-│  - FOREIGN KEY integrity                                     │
-└─────────────────────────────────────────────────────────────┘
-```
+**Layer 1: UI Validation (Flet TextField constraints)**
+- max_length limits
+- input_filter for allowed characters
+- Required field enforcement
+
+**Layer 2: Application Validation (Python)**
+- Type checking
+- Format validation (email regex, password policy)
+- Business logic rules
+
+**Layer 3: Database Constraints**
+- Parameterized queries (SQL injection prevention)
+- UNIQUE constraints
+- FOREIGN KEY integrity
 
 ### 2.2 SQL Injection Prevention
 

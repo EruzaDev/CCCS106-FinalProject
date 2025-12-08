@@ -6,76 +6,36 @@ The HonestBallot application uses **SQLite** as its database engine with the fol
 
 ## Entity Relationship Diagram (ERD)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              HONESTBALLOT ERD                                    │
-└─────────────────────────────────────────────────────────────────────────────────┘
+For a visual ERD, see `docs/images/erd.png` or use [dbdiagram.io](https://dbdiagram.io) with the schema below.
 
-┌─────────────────────┐         ┌─────────────────────┐         ┌─────────────────┐
-│       USERS         │         │        VOTES        │         │   CANDIDATES    │
-├─────────────────────┤         ├─────────────────────┤         ├─────────────────┤
-│ PK id              │◄────────┤ FK voter_id         │         │ FK user_id      │
-│    username        │         │ FK candidate_id     │────────►│    position     │
-│    email           │         │    position         │         │    party        │
-│    password_hash   │         │    election_session │         │    biography    │
-│    role            │         │    created_at       │         │    profile_image│
-│    full_name       │         └─────────────────────┘         └─────────────────┘
-│    position        │                                                    │
-│    party           │         ┌─────────────────────┐                   │
-│    biography       │         │   LEGAL_RECORDS     │                   │
-│    profile_image   │         ├─────────────────────┤                   │
-│    created_at      │◄────────┤ FK politician_id    │◄──────────────────┘
-└─────────────────────┘         │    record_type      │
-         │                      │    title            │
-         │                      │    description      │
-         │                      │    record_date      │
-         │                      │    status           │
-         │                      │ FK added_by         │
-         │                      │ FK verified_by      │
-         │                      │    created_at       │
-         │                      └─────────────────────┘
-         │
-         │                      ┌─────────────────────┐
-         │                      │    AUDIT_LOGS       │
-         │                      ├─────────────────────┤
-         └─────────────────────►│ FK user_id          │
-                                │    action           │
-                                │    action_type      │
-                                │    description      │
-                                │    user_role        │
-                                │    target_type      │
-                                │    target_id        │
-                                │    details (JSON)   │
-                                │    ip_address       │
-                                │    created_at       │
-                                └─────────────────────┘
+### Database Tables Overview
 
-┌─────────────────────┐         ┌─────────────────────┐
-│   VOTING_STATUS     │         │ ELECTION_SESSIONS   │
-├─────────────────────┤         ├─────────────────────┤
-│ PK id              │         │ PK id              │
-│    is_active       │         │    name             │
-│    started_at      │         │    description      │
-│    ended_at        │         │    start_date       │
-│ FK updated_by      │         │    end_date         │
-└─────────────────────┘         │    status           │
-                                │ FK created_by       │
-┌─────────────────────┐         │    created_at       │
-│   USER_SESSIONS     │         └─────────────────────┘
-├─────────────────────┤
-│ PK id              │         ┌─────────────────────┐
-│ FK user_id         │         │ACHIEVEMENT_VERIFY   │
-│    session_token   │         ├─────────────────────┤
-│    is_active       │         │ PK id              │
-│    created_at      │         │ FK politician_id    │
-│    last_activity   │         │    achievement_title│
-└─────────────────────┘         │    description      │
-                                │    evidence_url     │
-                                │    status           │
-                                │ FK verified_by      │
-                                │    created_at       │
-                                └─────────────────────┘
-```
+| Table Name | Primary Key | Description |
+|------------|-------------|-------------|
+| **users** | id | All user accounts (voters, politicians, COMELEC, NBI) |
+| **votes** | id | Cast votes with voter and candidate references |
+| **candidates** | id | Candidate information (legacy table) |
+| **election_sessions** | id | Election period definitions |
+| **user_sessions** | id | Active login sessions |
+| **achievement_verifications** | id | Politician achievements pending COMELEC verification |
+| **voting_status** | id | Current voting open/closed status |
+| **legal_records** | id | NBI-managed legal records for politicians |
+| **audit_logs** | id | Complete action audit trail |
+| **login_attempts** | id | Failed/successful login tracking |
+| **news_posts** | id | News and announcements |
+
+### Table Relationships
+
+| Parent Table | Child Table | Relationship | Foreign Key |
+|--------------|-------------|--------------|-------------|
+| users | votes | One-to-Many | votes.voter_id → users.id |
+| users | legal_records | One-to-Many | legal_records.politician_id → users.id |
+| users | audit_logs | One-to-Many | audit_logs.user_id → users.id |
+| users | user_sessions | One-to-Many | user_sessions.user_id → users.id |
+| users | achievement_verifications | One-to-Many | achievement_verifications.politician_id → users.id |
+| users | voting_status | One-to-Many | voting_status.updated_by → users.id |
+| users | news_posts | One-to-Many | news_posts.author_id → users.id |
+| election_sessions | votes | One-to-Many | votes.election_session_id → election_sessions.id |
 
 ## Table Definitions
 
