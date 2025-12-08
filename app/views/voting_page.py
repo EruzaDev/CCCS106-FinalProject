@@ -37,7 +37,7 @@ class VotingPage(ft.Column):
     def will_unmount(self):
         """Called when the control is about to be removed - unsubscribe"""
         if self.page:
-            self.page.pubsub.unsubscribe()
+            self.page.pubsub.unsubscribe(self._on_voting_status_change)
     
     def _on_voting_status_change(self, message):
         """Handle voting status change broadcast from COMELEC"""
