@@ -409,27 +409,31 @@ class VoterDashboard(ft.Column):
         return ft.ResponsiveRow(cards, spacing=16, run_spacing=16)
     
     def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count, is_selected=False):
-        """Build a candidate card"""
-        # Create avatar/image - use expand=True for responsive width
+        """Build a candidate card with consistent sizing"""
+        # Fixed dimensions for consistent card layout
+        CARD_IMAGE_HEIGHT = 140
+        CARD_MIN_HEIGHT = 380
+        
+        # Create avatar/image with fixed height
         if image:
             profile_image = ft.Container(
                 content=ft.Image(
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
-                    height=160,
+                    width=float("inf"),
+                    height=CARD_IMAGE_HEIGHT,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
-                expand=True,
+                height=CARD_IMAGE_HEIGHT,
             )
         else:
             profile_image = ft.Container(
                 content=ft.Icon(ft.Icons.PERSON, size=60, color="#CCCCCC"),
                 bgcolor="#E8EAF6",
-                height=160,
+                height=CARD_IMAGE_HEIGHT,
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
-                expand=True,
             )
         
         # Verification badge
@@ -482,6 +486,11 @@ class VoterDashboard(ft.Column):
         card_border = ft.border.all(3, "#5C6BC0") if is_selected else None
         card_shadow_color = ft.Colors.with_opacity(0.3, "#5C6BC0") if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
         
+        # Truncate biography to consistent length
+        bio_display = biography[:70] + "..." if len(biography) > 70 else biography
+        if not bio_display:
+            bio_display = "No biography available."
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -502,40 +511,31 @@ class VoterDashboard(ft.Column):
                                 right=10,
                                 top=10,
                             ),
-                            # Selected overlay - expand to fill width
-                            ft.Container(
-                                bgcolor=ft.Colors.with_opacity(0.1, "#5C6BC0") if is_selected else None,
-                                border_radius=ft.border_radius.only(top_left=12, top_right=12),
-                                height=160,
-                                expand=True,
-                            ) if is_selected else ft.Container(),
                         ],
+                        height=CARD_IMAGE_HEIGHT,
                     ),
-                    # Info section
+                    # Info section with fixed height
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Row(
-                                    [
-                                        ft.Text(name, size=16, weight=ft.FontWeight.BOLD, expand=True),
-                                        ft.Container(
-                                            content=ft.Text("SELECTED", size=9, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
-                                            bgcolor="#5C6BC0",
-                                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                                            border_radius=8,
-                                            visible=is_selected,
-                                        ),
-                                    ],
+                                ft.Text(
+                                    name, 
+                                    size=14, 
+                                    weight=ft.FontWeight.BOLD,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
                                 ft.Text(position, size=12, color="#5C6BC0"),
                                 ft.Text(party, size=11, color="#666666"),
-                                ft.Container(height=8),
+                                ft.Container(height=4),
                                 ft.Text(
-                                    biography[:80] + "..." if len(biography) > 80 else biography,
+                                    bio_display,
                                     size=11,
                                     color="#666666",
+                                    max_lines=2,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
-                                ft.Container(height=8),
+                                ft.Container(height=4),
                                 ft.Row(
                                     [
                                         ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
@@ -543,7 +543,7 @@ class VoterDashboard(ft.Column):
                                     ],
                                     spacing=4,
                                 ),
-                                ft.Container(height=12),
+                                ft.Container(expand=True),  # Spacer to push buttons to bottom
                                 ft.Row(
                                     [
                                         ft.ElevatedButton(
@@ -567,14 +567,18 @@ class VoterDashboard(ft.Column):
                                     ],
                                 ),
                             ],
+                            spacing=2,
+                            expand=True,
                         ),
-                        padding=16,
+                        padding=12,
                         bgcolor="#F5F5FF" if is_selected else None,
+                        expand=True,
                     ),
                 ],
                 spacing=0,
+                expand=True,
             ),
-            expand=True,
+            height=CARD_MIN_HEIGHT,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=card_border,
