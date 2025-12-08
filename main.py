@@ -555,6 +555,7 @@ class HonestBallotApp:
 def main(page: ft.Page):
     """Main function to run the app"""
     app = HonestBallotApp()
+    page.theme_mode = ft.ThemeMode.LIGHT
     app.main(page)
 
 

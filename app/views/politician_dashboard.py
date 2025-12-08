@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
+from components.date_picker_field import DatePickerField
 
 
 class PoliticianDashboard(ft.Column):
@@ -473,12 +474,9 @@ class PoliticianDashboard(ft.Column):
             bgcolor="#FAFAFA",
         )
         
-        self.date_field = ft.TextField(
+        self.date_field = DatePickerField(
             label="Date",
-            hint_text="MM/DD/YYYY",
-            border_radius=8,
-            bgcolor="#FAFAFA",
-            width=200,
+            width=250,
         )
         
         return ft.Container(

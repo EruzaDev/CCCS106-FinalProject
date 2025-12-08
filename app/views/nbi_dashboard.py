@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
+from components.date_picker_field import DatePickerField
 
 
 class NBIDashboard(ft.Column):
@@ -287,10 +288,9 @@ class NBIDashboard(ft.Column):
             width=400,
         )
         
-        self.record_date_field = ft.TextField(
+        self.record_date_field = DatePickerField(
             label="Date",
-            hint_text="MM/DD/YYYY",
-            width=200,
+            width=250,
         )
         
         self.add_record_form_container = ft.Container(
@@ -713,10 +713,10 @@ class NBIDashboard(ft.Column):
             width=350,
         )
         
-        edit_date_field = ft.TextField(
+        edit_date_field = DatePickerField(
             label="Date",
             value=record["date"] or "",
-            width=200,
+            width=250,
         )
         
         status_options = [

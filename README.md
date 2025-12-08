@@ -121,11 +121,11 @@ python main.py
 
 ### Demo User Credentials
 
-| Role | Email | Password |
+| Role | Username | Password |
 |------|-------|----------|
-| COMELEC | comelec1@honestballot.local | com123 |
-| NBI | nbi1@honestballot.local | nbi123 |
-| Voter | voter1@honestballot.local | voter123 |
+| COMELEC | comelec1 | com123 |
+| NBI | nbi1 | nbi123 |
+| Voter | voter1 | voter123 |
 | Politician | *(any politician name)* | pol123 |
 
 ### Dependencies
