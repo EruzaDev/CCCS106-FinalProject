@@ -309,18 +309,28 @@ class PoliticianDashboard(ft.Column):
         )
     
     def _build_statistics_row(self):
-        """Build statistics row"""
+        """Build responsive statistics row"""
         total = len(self.achievements)
         verified = len([a for a in self.achievements if a[4] == 'verified'])
         records = 0  # Placeholder for NBI records
         
-        return ft.Row(
+        return ft.ResponsiveRow(
             [
-                self._build_stat_card("Total Achievements", str(total), ft.Icons.EMOJI_EVENTS, "#5C6BC0"),
-                self._build_stat_card("Verified Achievements", str(verified), ft.Icons.VERIFIED, "#4CAF50"),
-                self._build_stat_card("Records on File", str(records), ft.Icons.DESCRIPTION, "#FF9800"),
+                ft.Container(
+                    content=self._build_stat_card("Total Achievements", str(total), ft.Icons.EMOJI_EVENTS, "#5C6BC0"),
+                    col={"xs": 12, "sm": 6, "md": 4},
+                ),
+                ft.Container(
+                    content=self._build_stat_card("Verified Achievements", str(verified), ft.Icons.VERIFIED, "#4CAF50"),
+                    col={"xs": 12, "sm": 6, "md": 4},
+                ),
+                ft.Container(
+                    content=self._build_stat_card("Records on File", str(records), ft.Icons.DESCRIPTION, "#FF9800"),
+                    col={"xs": 12, "sm": 12, "md": 4},
+                ),
             ],
             spacing=16,
+            run_spacing=16,
         )
     
     def _build_stat_card(self, label, value, icon, color):

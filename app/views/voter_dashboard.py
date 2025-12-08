@@ -350,7 +350,7 @@ class VoterDashboard(ft.Column):
                 self.page.update()
     
     def _build_candidate_grid(self, politicians):
-        """Build grid of candidate cards"""
+        """Build responsive grid of candidate cards"""
         if not politicians:
             return ft.Container(
                 content=ft.Column(
@@ -365,11 +365,12 @@ class VoterDashboard(ft.Column):
                 alignment=ft.alignment.center,
             )
         
-        # Create rows of 3 cards each
-        rows = []
+        # Create responsive cards using ResponsiveRow
+        # col breakpoints: xs (extra small), sm (small), md (medium), lg (large), xl (extra large)
+        # Values represent number of columns out of 12
         cards = []
         
-        for i, politician in enumerate(politicians):
+        for politician in politicians:
             user_id, username, email, role, created_at, full_name, status, position, party, biography, profile_image = politician
             
             # Get verification count for this politician
@@ -392,32 +393,34 @@ class VoterDashboard(ft.Column):
                 pending_count=pending_count,
                 is_selected=is_selected,
             )
-            cards.append(card)
             
-            # Create row every 3 cards
-            if len(cards) == 3:
-                rows.append(ft.Row(cards, spacing=16))
-                cards = []
+            # Wrap card in responsive container
+            # xs=12 (1 card per row on phones)
+            # sm=6 (2 cards per row on small tablets)
+            # md=4 (3 cards per row on tablets/small desktops)
+            # lg=3 (4 cards per row on desktops)
+            # xl=2 (6 cards per row on large screens)
+            responsive_card = ft.Container(
+                content=card,
+                col={"xs": 12, "sm": 6, "md": 4, "lg": 3, "xl": 2},
+            )
+            cards.append(responsive_card)
         
-        # Add remaining cards
-        if cards:
-            rows.append(ft.Row(cards, spacing=16))
-        
-        return ft.Column(rows, spacing=16)
+        return ft.ResponsiveRow(cards, spacing=16, run_spacing=16)
     
     def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count, is_selected=False):
         """Build a candidate card"""
-        # Create avatar/image
+        # Create avatar/image - use expand=True for responsive width
         if image:
             profile_image = ft.Container(
                 content=ft.Image(
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
-                    width=280,
                     height=160,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
+                expand=True,
             )
         else:
             profile_image = ft.Container(
@@ -426,6 +429,7 @@ class VoterDashboard(ft.Column):
                 height=160,
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
+                expand=True,
             )
         
         # Verification badge
@@ -498,12 +502,12 @@ class VoterDashboard(ft.Column):
                                 right=10,
                                 top=10,
                             ),
-                            # Selected overlay
+                            # Selected overlay - expand to fill width
                             ft.Container(
                                 bgcolor=ft.Colors.with_opacity(0.1, "#5C6BC0") if is_selected else None,
                                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                                 height=160,
-                                width=280,
+                                expand=True,
                             ) if is_selected else ft.Container(),
                         ],
                     ),
@@ -570,7 +574,7 @@ class VoterDashboard(ft.Column):
                 ],
                 spacing=0,
             ),
-            width=280,
+            expand=True,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=card_border,

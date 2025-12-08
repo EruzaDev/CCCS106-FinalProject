@@ -5,9 +5,11 @@ from datetime import datetime
 class NewsFeedCard(ft.Container):
     """Individual news post card component"""
     
-    def __init__(self, post: dict):
+    def __init__(self, post: dict, col: dict = None):
         super().__init__()
         self.post = post
+        # Responsive column sizing - adapts to screen size
+        self.col = col or {"xs": 12, "sm": 6, "md": 4, "lg": 4, "xl": 3}
         self._build()
     
     def _build(self):
@@ -229,11 +231,12 @@ class NewsFeed(ft.Column):
             wrap=True,
         )
         
-        # Posts list
+        # Posts grid - uses ResponsiveRow for flexible layout
         if self.posts:
-            posts_content = ft.Column(
+            posts_content = ft.ResponsiveRow(
                 [NewsFeedCard(post) for post in self.posts],
                 spacing=16,
+                run_spacing=16,
             )
         else:
             posts_content = ft.Container(
