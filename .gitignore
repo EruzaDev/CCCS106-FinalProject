@@ -20,3 +20,5 @@ app.log
 .vscode/
 .idea/
 
+voting_app.db
+.gitignore
