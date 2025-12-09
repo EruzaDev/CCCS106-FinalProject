@@ -1,4 +1,5 @@
 import flet as ft
+from app.theme import AppTheme
 
 
 class ElectionResults(ft.Column):
@@ -27,7 +28,11 @@ class ElectionResults(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
@@ -48,7 +53,7 @@ class ElectionResults(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#4CAF50",
+                                bgcolor=AppTheme.PRIMARY,
                                 border_radius=8,
                                 padding=8,
                             ),
@@ -58,12 +63,12 @@ class ElectionResults(ft.Column):
                                         "COMELEC Dashboard",
                                         size=20,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Welcome, Commissioner {self.username}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -73,7 +78,7 @@ class ElectionResults(ft.Column):
                     ),
                     ft.Row(
                         [
-                            ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
+                            ft.Icon(ft.Icons.LOGOUT, color=AppTheme.PRIMARY, size=18),
                             ft.TextButton(
                                 "Logout",
                                 on_click=lambda e: self.on_logout(),

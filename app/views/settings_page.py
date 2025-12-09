@@ -1,4 +1,5 @@
 import flet as ft
+from app.theme import AppTheme
 
 
 class SettingsPage(ft.Column):
@@ -24,12 +25,15 @@ class SettingsPage(ft.Column):
             ],
             value="light",
             width=200,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
         )
         
         # Notification settings
         self.notifications_switch = ft.Switch(
             label="Enable Notifications",
             value=True,
+            active_color=AppTheme.PRIMARY,
         )
         
         # Build UI
@@ -42,30 +46,39 @@ class SettingsPage(ft.Column):
                             "Settings",
                             size=24,
                             weight=ft.FontWeight.BOLD,
+                            color=AppTheme.TEXT_PRIMARY,
                         ),
-                        ft.Divider(height=20),
+                        ft.Divider(height=20, color=AppTheme.BORDER_COLOR),
                         ft.Text(
                             "Appearance",
                             size=18,
                             weight=ft.FontWeight.BOLD,
+                            color=AppTheme.TEXT_PRIMARY,
                         ),
                         self.theme_dropdown,
-                        ft.Divider(height=20),
+                        ft.Divider(height=20, color=AppTheme.BORDER_COLOR),
                         ft.Text(
                             "Notifications",
                             size=18,
                             weight=ft.FontWeight.BOLD,
+                            color=AppTheme.TEXT_PRIMARY,
                         ),
                         self.notifications_switch,
-                        ft.Divider(height=30),
+                        ft.Divider(height=30, color=AppTheme.BORDER_COLOR),
                         ft.Row(
                             [
                                 ft.ElevatedButton(
                                     text="Save",
+                                    bgcolor=AppTheme.PRIMARY,
+                                    color=ft.Colors.WHITE,
+                                    style=ft.ButtonStyle(
+                                        shape=ft.RoundedRectangleBorder(radius=8),
+                                    ),
                                     on_click=self._handle_save,
                                 ),
                                 ft.TextButton(
                                     text="Cancel",
+                                    style=ft.ButtonStyle(color=AppTheme.PRIMARY),
                                     on_click=lambda e: self.on_cancel(),
                                 ),
                             ],
@@ -75,6 +88,12 @@ class SettingsPage(ft.Column):
                     spacing=10,
                 ),
                 padding=30,
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
+                expand=True,
             ),
         ]
         
@@ -88,6 +107,7 @@ class SettingsPage(ft.Column):
                 [
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
+                        icon_color=AppTheme.PRIMARY,
                         on_click=lambda e: self.on_back(),
                         tooltip="Back",
                     ),
@@ -95,10 +115,12 @@ class SettingsPage(ft.Column):
                         "Settings",
                         size=20,
                         weight=ft.FontWeight.BOLD,
+                        color=AppTheme.TEXT_PRIMARY,
                     ),
                     ft.Container(expand=True),
                     ft.IconButton(
                         icon=ft.Icons.LOGOUT,
+                        icon_color=AppTheme.PRIMARY,
                         on_click=lambda e: self.on_logout(),
                         tooltip="Logout",
                     ),
@@ -108,8 +130,10 @@ class SettingsPage(ft.Column):
             ),
             padding=15,
             bgcolor=ft.Colors.WHITE,
-            border_bottom=ft.Border(
-                bottom=ft.BorderSide(1, ft.Colors.GREY_300)
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
             ),
         )
     

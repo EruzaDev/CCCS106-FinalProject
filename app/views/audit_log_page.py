@@ -1,5 +1,6 @@
 import flet as ft
 from datetime import datetime, timedelta
+from app.theme import AppTheme
 
 
 class AuditLogPage(ft.Column):
@@ -43,7 +44,11 @@ class AuditLogPage(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
@@ -54,11 +59,11 @@ class AuditLogPage(ft.Column):
     def _build_header(self):
         """Build the header"""
         role_colors = {
-            'comelec': '#4CAF50',
-            'nbi': '#FF5722',
-            'politician': '#5C6BC0',
+            'comelec': AppTheme.PRIMARY,
+            'nbi': AppTheme.PRIMARY,
+            'politician': AppTheme.PRIMARY,
         }
-        header_color = role_colors.get(self.user_role, '#5C6BC0')
+        header_color = role_colors.get(self.user_role, AppTheme.PRIMARY)
         
         role_labels = {
             'comelec': 'COMELEC',
@@ -74,7 +79,7 @@ class AuditLogPage(ft.Column):
                         [
                             ft.IconButton(
                                 icon=ft.Icons.ARROW_BACK,
-                                icon_color="#333333",
+                                icon_color=AppTheme.PRIMARY,
                                 on_click=lambda e: self.on_back(),
                             ),
                             ft.Container(

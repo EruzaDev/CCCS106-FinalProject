@@ -1,5 +1,6 @@
 import flet as ft
 from datetime import datetime
+from app.theme import AppTheme
 
 
 class NewsFeedCard(ft.Container):
@@ -15,26 +16,26 @@ class NewsFeedCard(ft.Container):
     def _build(self):
         # Role badge colors
         role_colors = {
-            "politician": ("#2196F3", "Politician"),
-            "nbi": ("#FF5722", "NBI"),
-            "comelec": ("#9C27B0", "COMELEC"),
+            "politician": (AppTheme.PRIMARY, "Politician"),
+            "nbi": (AppTheme.PRIMARY, "NBI"),
+            "comelec": (AppTheme.PRIMARY, "COMELEC"),
         }
         
         role_color, role_label = role_colors.get(
             self.post.get("author_role", ""), 
-            ("#757575", "Official")
+            (AppTheme.TEXT_SECONDARY, "Official")
         )
         
         # Category badge
         category_colors = {
             "announcement": "#4CAF50",
-            "campaign": "#2196F3",
+            "campaign": AppTheme.PRIMARY,
             "legal": "#FF5722",
-            "election": "#9C27B0",
-            "general": "#757575",
+            "election": AppTheme.SECONDARY,
+            "general": AppTheme.TEXT_SECONDARY,
         }
         category = self.post.get("category", "general")
-        category_color = category_colors.get(category, "#757575")
+        category_color = category_colors.get(category, AppTheme.TEXT_SECONDARY)
         
         # Format date
         created_at = self.post.get("created_at", "")

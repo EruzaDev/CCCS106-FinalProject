@@ -1,4 +1,5 @@
 import flet as ft
+from app.theme import AppTheme
 
 
 class NewsPostCreator(ft.Container):
@@ -26,6 +27,8 @@ class NewsPostCreator(ft.Container):
             hint_text="Enter post title...",
             border_radius=8,
             bgcolor=ft.Colors.WHITE,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
         )
         
         self.content_field = ft.TextField(
@@ -36,6 +39,8 @@ class NewsPostCreator(ft.Container):
             max_lines=6,
             border_radius=8,
             bgcolor=ft.Colors.WHITE,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
         )
         
         # Category options based on role
@@ -57,6 +62,8 @@ class NewsPostCreator(ft.Container):
             value="general",
             border_radius=8,
             bgcolor=ft.Colors.WHITE,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
             width=200,
         )
         

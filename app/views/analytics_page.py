@@ -7,6 +7,7 @@ from app.components.charts import (
     BarChart, DonutChart, StatCard, CompatibilityMeter, InsightCard, ChartColors
 )
 from app.services.ai_service import AIService, RecommendationEngine
+from app.theme import AppTheme
 
 
 class AnalyticsPage(ft.Column):
@@ -45,7 +46,11 @@ class AnalyticsPage(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
@@ -62,7 +67,7 @@ class AnalyticsPage(ft.Column):
                         [
                             ft.IconButton(
                                 icon=ft.Icons.ARROW_BACK,
-                                icon_color="#333333",
+                                icon_color=AppTheme.PRIMARY,
                                 on_click=lambda e: self.on_back(),
                             ),
                             ft.Container(
@@ -71,7 +76,7 @@ class AnalyticsPage(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#5C6BC0",
+                                bgcolor=AppTheme.PRIMARY,
                                 border_radius=8,
                                 padding=8,
                             ),

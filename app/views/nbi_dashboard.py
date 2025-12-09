@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
+from app.theme import AppTheme
 from components.date_picker_field import DatePickerField
 
 
@@ -40,19 +41,200 @@ class NBIDashboard(ft.Column):
             ft.Container(
                 content=ft.Column(
                     [
-                        self._build_content(),
+                        self._build_statistics_row(),
+                        ft.Container(height=20),
+                        self._build_record_management(),
+                        ft.Container(height=20),
+                        self._build_politician_records_simple(),
+                        ft.Container(height=20),
+                        self._build_news_section(),
                     ],
                     scroll=ft.ScrollMode.AUTO,
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
         
         self.expand = True
         self.spacing = 0
+    
+    def _build_politician_records_simple(self):
+        """Build a simplified politician records section with verify/dismiss actions"""
+        # Get all legal records
+        records = self.db.get_all_legal_records() if self.db else []
+        
+        # Store records container reference for refreshing
+        self.records_list_column = ft.Column(spacing=8)
+        self._populate_records_list(records)
+        
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text("Legal Records", size=18, weight=ft.FontWeight.BOLD, color="#333333"),
+                    ft.IconButton(
+                        icon=ft.Icons.REFRESH,
+                        icon_color=AppTheme.PRIMARY,
+                        tooltip="Refresh Records",
+                        on_click=lambda e: self._refresh_legal_records(),
+                    ),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Container(height=12),
+                self.records_list_column,
+            ]),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            padding=20,
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=10,
+                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+            ),
+        )
+    
+    def _populate_records_list(self, records):
+        """Populate the records list with record cards"""
+        self.records_list_column.controls.clear()
+        
+        if not records:
+            self.records_list_column.controls.append(
+                ft.Container(
+                    content=ft.Text("No legal records found", color="#666666"),
+                    padding=20,
+                )
+            )
+            return
+        
+        for record in records:
+            record_id = record[0]
+            status = record[6]
+            
+            # Build action buttons based on status
+            action_buttons = []
+            if status == "pending":
+                action_buttons = [
+                    ft.ElevatedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.CHECK, size=14),
+                            ft.Text("Verify", size=11),
+                        ], spacing=4),
+                        bgcolor="#4CAF50",
+                        color=ft.Colors.WHITE,
+                        on_click=lambda e, rid=record_id: self._verify_legal_record(rid),
+                    ),
+                    ft.OutlinedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.CLOSE, size=14),
+                            ft.Text("Dismiss", size=11),
+                        ], spacing=4),
+                        style=ft.ButtonStyle(
+                            side=ft.BorderSide(1, "#F44336"),
+                            color="#F44336",
+                        ),
+                        on_click=lambda e, rid=record_id: self._dismiss_legal_record(rid),
+                    ),
+                ]
+            elif status == "verified":
+                action_buttons = [
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.VERIFIED, size=14, color="#4CAF50"),
+                            ft.Text("Verified", size=11, color="#4CAF50"),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    ),
+                ]
+            elif status == "dismissed" or status == "rejected":
+                action_buttons = [
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.CANCEL, size=14, color="#F44336"),
+                            ft.Text("Dismissed", size=11, color="#F44336"),
+                        ], spacing=4),
+                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    ),
+                ]
+            
+            self.records_list_column.controls.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Row([
+                            ft.Text(record[3], weight=ft.FontWeight.BOLD, size=14),  # title
+                            ft.Container(
+                                content=ft.Text(status.capitalize(), size=10, color=ft.Colors.WHITE),
+                                bgcolor=self._get_status_color(status),
+                                border_radius=10,
+                                padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                            ),
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Text(f"Type: {record[2]}", size=12, color="#666666"),
+                        ft.Text(f"Politician: {record[8] or record[9]}", size=12, color="#666666"),
+                        ft.Text(f"Description: {(record[4] or 'N/A')[:100]}{'...' if record[4] and len(record[4]) > 100 else ''}", size=12, color="#666666"),
+                        ft.Text(f"Date: {record[5] or 'N/A'}", size=11, color="#999999"),
+                        ft.Container(height=8),
+                        ft.Row(action_buttons, spacing=8),
+                    ], spacing=4),
+                    bgcolor="#F8F9FA",
+                    border_radius=8,
+                    padding=12,
+                )
+            )
+    
+    def _refresh_legal_records(self):
+        """Refresh the legal records list"""
+        records = self.db.get_all_legal_records() if self.db else []
+        self._populate_records_list(records)
+        if self.page:
+            self.page.update()
+    
+    def _verify_legal_record(self, record_id):
+        """Verify a legal record"""
+        try:
+            self.db.update_legal_record_status(record_id, "verified", self.current_user_id)
+            self.db.log_action(
+                action="Legal Record Verified",
+                action_type="legal_record",
+                description=f"Record ID {record_id} verified",
+                user_id=self.current_user_id,
+                user_role="nbi",
+            )
+            self._show_success("Record verified successfully")
+            self._refresh_legal_records()
+            self._update_stats()
+        except Exception as ex:
+            print(f"Error verifying record: {ex}")
+            self._show_error("Failed to verify record")
+    
+    def _dismiss_legal_record(self, record_id):
+        """Dismiss a legal record"""
+        try:
+            self.db.update_legal_record_status(record_id, "dismissed", self.current_user_id)
+            self.db.log_action(
+                action="Legal Record Dismissed",
+                action_type="legal_record",
+                description=f"Record ID {record_id} dismissed",
+                user_id=self.current_user_id,
+                user_role="nbi",
+            )
+            self._show_success("Record dismissed successfully")
+            self._refresh_legal_records()
+            self._update_stats()
+        except Exception as ex:
+            print(f"Error dismissing record: {ex}")
+            self._show_error("Failed to dismiss record")
+    
+    def _update_stats(self):
+        """Update the statistics display"""
+        # Rebuild UI to update stats
+        self._build_ui()
+        if self.page:
+            self.page.update()
     
     def _build_header(self):
         """Build the header with NBI branding"""
@@ -67,7 +249,7 @@ class NBIDashboard(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#FF5722",
+                                bgcolor=AppTheme.PRIMARY,
                                 border_radius=8,
                                 padding=8,
                             ),
@@ -77,12 +259,12 @@ class NBIDashboard(ft.Column):
                                         "NBI Officer Dashboard",
                                         size=20,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Welcome, Officer {self.username}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -94,16 +276,16 @@ class NBIDashboard(ft.Column):
                         [
                             ft.IconButton(
                                 icon=ft.Icons.HISTORY,
-                                icon_color="#FF5722",
+                                icon_color=AppTheme.PRIMARY,
                                 tooltip="Audit Logs",
                                 on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
                             ),
-                            ft.Icon(ft.Icons.LOGOUT, color="#FF5722", size=18),
+                            ft.Icon(ft.Icons.LOGOUT, color=AppTheme.PRIMARY, size=18),
                             ft.TextButton(
                                 "Logout",
                                 on_click=lambda e: self.on_logout(),
                                 style=ft.ButtonStyle(
-                                    color="#FF5722",
+                                    color=AppTheme.PRIMARY,
                                 ),
                             ),
                         ],
@@ -114,7 +296,12 @@ class NBIDashboard(ft.Column):
             ),
             padding=ft.padding.symmetric(horizontal=24, vertical=16),
             bgcolor=ft.Colors.WHITE,
-            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            border=ft.border.only(bottom=ft.BorderSide(1, AppTheme.BORDER_COLOR)),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
+            ),
         )
     
     def _build_content(self):
@@ -334,18 +521,26 @@ class NBIDashboard(ft.Column):
     
     def _show_add_record_form(self, e):
         """Show the add record form"""
-        self.add_record_form_container.visible = True
-        self.update()
+        try:
+            self.add_record_form_container.visible = True
+            if self.page:
+                self.page.update()
+        except Exception as ex:
+            print(f"Error showing form: {ex}")
     
     def _hide_add_record_form(self, e):
         """Hide the add record form and clear fields"""
-        self.add_record_form_container.visible = False
-        self.politician_dropdown.value = None
-        self.record_type_dropdown.value = None
-        self.record_title_field.value = ""
-        self.record_description_field.value = ""
-        self.record_date_field.value = ""
-        self.update()
+        try:
+            self.add_record_form_container.visible = False
+            self.politician_dropdown.value = None
+            self.record_type_dropdown.value = None
+            self.record_title_field.value = ""
+            self.record_description_field.value = ""
+            self.record_date_field.value = ""
+            if self.page:
+                self.page.update()
+        except Exception as ex:
+            print(f"Error hiding form: {ex}")
     
     def _on_politician_selected(self, e):
         """Handle politician selection"""
@@ -356,7 +551,8 @@ class NBIDashboard(ft.Column):
         self.selected_record_type = e.control.value
         if self.record_title_field and not self.record_title_field.value:
             self.record_title_field.value = e.control.value
-            self.update()
+            if self.page:
+                self.page.update()
     
     def _submit_record(self, e):
         """Submit a new legal record"""
@@ -401,46 +597,55 @@ class NBIDashboard(ft.Column):
     
     def _build_politician_records(self):
         """Build the politician records list section"""
-        self.records_container = ft.Column(
-            [self._build_records_list()],
-        )
-        
-        return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Text(
-                                "Politician Records",
-                                size=18,
-                                weight=ft.FontWeight.BOLD,
-                                color="#333333",
-                            ),
-                        ],
-                    ),
-                    ft.Container(height=12),
-                    # Search bar
-                    ft.TextField(
-                        hint_text="Search politicians...",
-                        prefix_icon=ft.Icons.SEARCH,
-                        width=300,
-                        height=40,
-                        border_radius=20,
-                        on_change=self._on_search_change,
-                    ),
-                    ft.Container(height=16),
-                    self.records_container,
-                ],
-            ),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=12,
-            padding=20,
-            shadow=ft.BoxShadow(
-                spread_radius=0,
-                blur_radius=10,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
-            ),
-        )
+        try:
+            self.records_container = ft.Column(
+                [self._build_records_list()],
+            )
+            
+            return ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Row(
+                            [
+                                ft.Text(
+                                    "Politician Records",
+                                    size=18,
+                                    weight=ft.FontWeight.BOLD,
+                                    color="#333333",
+                                ),
+                            ],
+                        ),
+                        ft.Container(height=12),
+                        # Search bar
+                        ft.TextField(
+                            hint_text="Search politicians...",
+                            prefix_icon=ft.Icons.SEARCH,
+                            width=300,
+                            height=40,
+                            border_radius=20,
+                            on_change=self._on_search_change,
+                        ),
+                        ft.Container(height=16),
+                        self.records_container,
+                    ],
+                ),
+                bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                padding=20,
+                shadow=ft.BoxShadow(
+                    spread_radius=0,
+                    blur_radius=10,
+                    color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                ),
+            )
+        except Exception as e:
+            print(f"ERROR in _build_politician_records: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            return ft.Container(
+                content=ft.Text(f"Error loading records: {e}", color="red"),
+                padding=20,
+            )
     
     def _on_search_change(self, e):
         """Handle search input change"""
@@ -855,7 +1060,7 @@ class NBIDashboard(ft.Column):
             ),
         )
     
-    def _on_news_post_created(self):
+    def _on_news_post_created(self, post_id=None):
         """Handle news post created event"""
         # Rebuild UI to show updated posts
         self._build_ui()
@@ -867,13 +1072,15 @@ class NBIDashboard(ft.Column):
         if self.records_container:
             self.records_container.controls = [self._build_records_list()]
             self._refresh_stats()
-            self.update()
+            if self.page:
+                self.page.update()
     
     def _refresh_stats(self):
         """Refresh the statistics - rebuild the UI"""
         # For simplicity, just update the page
         self._build_ui()
-        self.update()
+        if self.page:
+            self.page.update()
     
     def _show_error(self, message):
         """Show error snackbar"""

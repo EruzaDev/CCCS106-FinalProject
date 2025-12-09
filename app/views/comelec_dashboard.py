@@ -1,5 +1,6 @@
 import flet as ft
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
+from app.theme import AppTheme
 
 
 class ComelecDashboard(ft.Column):
@@ -44,7 +45,11 @@ class ComelecDashboard(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
@@ -65,7 +70,7 @@ class ComelecDashboard(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#4CAF50",
+                                bgcolor=AppTheme.PRIMARY,
                                 border_radius=8,
                                 padding=8,
                             ),
@@ -75,12 +80,12 @@ class ComelecDashboard(ft.Column):
                                         "COMELEC Dashboard",
                                         size=20,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Welcome, Commissioner {self.username}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -92,22 +97,22 @@ class ComelecDashboard(ft.Column):
                         [
                             ft.IconButton(
                                 icon=ft.Icons.ANALYTICS,
-                                icon_color="#4CAF50",
+                                icon_color=AppTheme.ACCENT,
                                 tooltip="Election Analytics",
                                 on_click=lambda e: self.on_analytics() if self.on_analytics else None,
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.HISTORY,
-                                icon_color="#5C6BC0",
+                                icon_color=AppTheme.PRIMARY,
                                 tooltip="Audit Logs",
                                 on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
                             ),
-                            ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
+                            ft.Icon(ft.Icons.LOGOUT, color=AppTheme.PRIMARY, size=18),
                             ft.TextButton(
                                 "Logout",
                                 on_click=lambda e: self.on_logout(),
                                 style=ft.ButtonStyle(
-                                    color="#5C6BC0",
+                                    color=AppTheme.PRIMARY,
                                 ),
                             ),
                         ],
@@ -118,7 +123,12 @@ class ComelecDashboard(ft.Column):
             ),
             padding=ft.padding.symmetric(horizontal=24, vertical=16),
             bgcolor=ft.Colors.WHITE,
-            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            border=ft.border.only(bottom=ft.BorderSide(1, AppTheme.BORDER_COLOR)),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
+            ),
         )
     
     def _build_content(self):
@@ -162,7 +172,7 @@ class ComelecDashboard(ft.Column):
                                     ft.Text(
                                         "Voting is currently inactive. Activate voting to allow voters to cast their ballots." if not self.voting_active else "Voting is currently active. Voters can now cast their ballots.",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 expand=True,
@@ -235,10 +245,10 @@ class ComelecDashboard(ft.Column):
         return ft.Container(
             content=ft.Column(
                 [
-                    ft.Icon(icon, color="#5C6BC0", size=32),
+                    ft.Icon(icon, color=AppTheme.PRIMARY, size=32),
                     ft.Container(height=8),
                     ft.Text(title, size=14, weight=ft.FontWeight.W_500),
-                    ft.Text(subtitle, size=11, color="#666666"),
+                    ft.Text(subtitle, size=11, color=AppTheme.TEXT_SECONDARY),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -263,9 +273,9 @@ class ComelecDashboard(ft.Column):
         
         return ft.Row(
             [
-                self._build_stat_card("Total Candidates", str(total_candidates), ft.Icons.PEOPLE, "#4CAF50"),
+                self._build_stat_card("Total Candidates", str(total_candidates), ft.Icons.PEOPLE, AppTheme.PRIMARY),
                 self._build_stat_card("Approved", str(total_candidates), ft.Icons.CHECK_CIRCLE, "#4CAF50"),
-                self._build_stat_card("Total Votes Cast", "0", ft.Icons.HOW_TO_VOTE, "#5C6BC0"),
+                self._build_stat_card("Total Votes Cast", "0", ft.Icons.HOW_TO_VOTE, AppTheme.PRIMARY),
                 self._build_stat_card("Verified", str(total_candidates), ft.Icons.VERIFIED, "#4CAF50"),
             ],
             spacing=16,
@@ -276,7 +286,7 @@ class ComelecDashboard(ft.Column):
         return ft.Container(
             content=ft.Row(
                 [
-                    ft.Text(label, size=12, color="#666666"),
+                    ft.Text(label, size=12, color=AppTheme.TEXT_SECONDARY),
                     ft.Container(width=8),
                     ft.Icon(icon, color=color, size=16),
                     ft.Container(width=4),
@@ -289,7 +299,7 @@ class ComelecDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
+                color=ft.Colors.with_opacity(0.05, AppTheme.PRIMARY),
             ),
         )
     
@@ -659,7 +669,7 @@ class ComelecDashboard(ft.Column):
             ),
         )
     
-    def _on_news_post_created(self):
+    def _on_news_post_created(self, post_id=None):
         """Handle news post created event"""
         # Rebuild UI to show updated posts
         self._build_ui()

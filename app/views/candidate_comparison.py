@@ -1,4 +1,5 @@
 import flet as ft
+from app.theme import AppTheme
 
 
 class CandidateComparison(ft.Column):
@@ -60,7 +61,11 @@ class CandidateComparison(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]

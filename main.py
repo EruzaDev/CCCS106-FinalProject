@@ -52,6 +52,14 @@ class HonestBallotApp:
         page.padding = 0
         page.spacing = 0
         
+        # Prevent window from accidentally closing
+        def on_window_event(e):
+            if e.data == "close":
+                print("Window close requested")
+                page.window.destroy()
+        
+        page.window.on_event = on_window_event
+        
         # Store session manager in page data
         page.session.set("session_manager", self.session_manager)
         page.session.set("db", self.db)
@@ -212,22 +220,33 @@ class HonestBallotApp:
     
     def show_nbi_dashboard(self):
         """Show the NBI Officer dashboard"""
-        self.page.clean()
-        
-        if not self.current_session:
-            self.show_login_page()
-            return
-        
-        dashboard = NBIDashboard(
-            username=self.current_session["username"],
-            db=self.db,
-            on_logout=self.handle_logout,
-            current_user_id=self.current_session["user_id"],
-            on_audit_log=self.show_audit_log,
-        )
-        
-        self.page.add(dashboard)
-        self.page.update()
+        try:
+            print("NBI: Cleaning page...")
+            self.page.clean()
+            self.page.overlay.clear()
+            
+            if not self.current_session:
+                self.show_login_page()
+                return
+            
+            print("NBI: Creating NBIDashboard instance...")
+            dashboard = NBIDashboard(
+                username=self.current_session["username"],
+                db=self.db,
+                on_logout=self.handle_logout,
+                current_user_id=self.current_session["user_id"],
+                on_audit_log=self.show_audit_log,
+            )
+            print("NBI: Dashboard created, adding to page...")
+            
+            self.page.add(dashboard)
+            print("NBI: Dashboard added, calling update...")
+            self.page.update()
+            print("NBI: Done!")
+        except Exception as e:
+            print(f"NBI ERROR: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_audit_log(self):
         """Show the Audit Log page"""
@@ -321,113 +340,122 @@ class HonestBallotApp:
     
     def handle_login(self, username, password):
         """Handle login attempt with credential stuffing protection"""
-        if not username or not password:
-            self.show_error_dialog("Login Error", "Please enter both username and password.")
-            return
-        
-        # Check if account is locked due to too many failed attempts
-        identifier = username.lower()
-        if self.db.is_account_locked(identifier):
-            remaining_time = self.db.get_lockout_remaining_time(identifier)
-            minutes = remaining_time // 60
-            seconds = remaining_time % 60
-            self.show_error_dialog(
-                "Account Locked", 
-                f"Too many failed login attempts. Please try again in {minutes}m {seconds}s."
-            )
-            return
-        
-        # Verify credentials from database (try username first, then email)
-        user = self.session_manager.db.verify_user_by_username(username, password)
-        if not user:
-            user = self.session_manager.db.verify_user(username, password)
-        
-        if user:
-            # Record successful login and clear failed attempts
-            self.db.record_login_attempt(identifier, success=True)
-            self.db.clear_failed_attempts(identifier)
+        try:
+            if not username or not password:
+                self.show_error_dialog("Login Error", "Please enter both username and password.")
+                return
             
-            # Create session
-            session_token = self.session_manager.create_session(
-                user["id"],
-                user["username"],
-                user["email"],
-                user["role"]
-            )
-            
-            # Store session
-            self.current_session = {
-                "token": session_token,
-                "user_id": user["id"],
-                "username": user["username"],
-                "email": user["email"],
-                "role": user["role"]
-            }
-            
-            # Log the login action to database
-            self.db.log_action(
-                action=f"User {user['username']} logged in",
-                action_type="login",
-                description=f"Successful login for {user['email']}",
-                user_id=user["id"],
-                user_role=user["role"],
-            )
-            
-            # Log to security logger
-            auth_logger.login_success(
-                username=user["username"],
-                user_id=user["id"],
-                role=user["role"]
-            )
-            
-            # Store in page session
-            self.page.session.set("current_session", self.current_session)
-            
-            # Route based on role
-            if user["role"] == "comelec":
-                self.show_comelec_dashboard()
-            elif user["role"] == "nbi":
-                self.show_nbi_dashboard()
-            elif user["role"] == "politician":
-                self.show_politician_dashboard()
-            else:
-                self.show_home_page()
-        else:
-            # Record failed login attempt
-            self.db.record_login_attempt(identifier, success=False)
-            
-            # Log the failed attempt to database
-            self.db.log_action(
-                action=f"Failed login attempt for {username}",
-                action_type="login_failed",
-                description=f"Invalid credentials provided",
-                user_id=None,
-                user_role=None,
-            )
-            
-            # Check if account just got locked
+            # Check if account is locked due to too many failed attempts
+            identifier = username.lower()
             if self.db.is_account_locked(identifier):
-                # Log account lockout to security logger
-                auth_logger.account_locked(
-                    username=username,
-                    duration_minutes=self.db.LOCKOUT_DURATION_MINUTES
-                )
+                remaining_time = self.db.get_lockout_remaining_time(identifier)
+                minutes = remaining_time // 60
+                seconds = remaining_time % 60
                 self.show_error_dialog(
                     "Account Locked", 
-                    f"Too many failed attempts. Account locked for {self.db.LOCKOUT_DURATION_MINUTES} minutes."
+                    f"Too many failed login attempts. Please try again in {minutes}m {seconds}s."
                 )
+                return
+            
+            # Verify credentials from database (try username first, then email)
+            user = self.session_manager.db.verify_user_by_username(username, password)
+            if not user:
+                user = self.session_manager.db.verify_user(username, password)
+            
+            if user:
+                print(f"LOGIN: User verified - {user['username']} role={user['role']}")
+                # Record successful login and clear failed attempts
+                self.db.record_login_attempt(identifier, success=True)
+                self.db.clear_failed_attempts(identifier)
+                
+                # Create session
+                session_token = self.session_manager.create_session(
+                    user["id"],
+                    user["username"],
+                    user["email"],
+                    user["role"]
+                )
+                
+                # Store session
+                self.current_session = {
+                    "token": session_token,
+                    "user_id": user["id"],
+                    "username": user["username"],
+                    "email": user["email"],
+                    "role": user["role"]
+                }
+                
+                # Log the login action to database
+                self.db.log_action(
+                    action=f"User {user['username']} logged in",
+                    action_type="login",
+                    description=f"Successful login for {user['email']}",
+                    user_id=user["id"],
+                    user_role=user["role"],
+                )
+                
+                # Log to security logger
+                auth_logger.login_success(
+                    username=user["username"],
+                    user_id=user["id"],
+                    role=user["role"]
+                )
+                
+                # Store in page session
+                self.page.session.set("current_session", self.current_session)
+                
+                print(f"LOGIN: Routing to dashboard for role={user['role']}")
+                # Route based on role
+                if user["role"] == "comelec":
+                    self.show_comelec_dashboard()
+                elif user["role"] == "nbi":
+                    self.show_nbi_dashboard()
+                elif user["role"] == "politician":
+                    self.show_politician_dashboard()
+                else:
+                    self.show_home_page()
+                print(f"LOGIN: Dashboard shown successfully")
             else:
-                attempts_remaining = self.db.MAX_LOGIN_ATTEMPTS - self.db.get_failed_attempts_count(identifier)
-                # Log failed login to security logger
-                auth_logger.login_failed(
-                    username=username,
-                    reason="Invalid credentials",
-                    attempts_remaining=attempts_remaining
+                # Record failed login attempt
+                self.db.record_login_attempt(identifier, success=False)
+                
+                # Log the failed attempt to database
+                self.db.log_action(
+                    action=f"Failed login attempt for {username}",
+                    action_type="login_failed",
+                    description=f"Invalid credentials provided",
+                    user_id=None,
+                    user_role=None,
                 )
-                self.show_error_dialog(
-                    "Login Failed", 
-                    f"Invalid email or password. {attempts_remaining} attempts remaining."
-                )
+                
+                # Check if account just got locked
+                if self.db.is_account_locked(identifier):
+                    # Log account lockout to security logger
+                    auth_logger.account_locked(
+                        username=username,
+                        duration_minutes=self.db.LOCKOUT_DURATION_MINUTES
+                    )
+                    self.show_error_dialog(
+                        "Account Locked", 
+                        f"Too many failed attempts. Account locked for {self.db.LOCKOUT_DURATION_MINUTES} minutes."
+                    )
+                else:
+                    attempts_remaining = self.db.MAX_LOGIN_ATTEMPTS - self.db.get_failed_attempts_count(identifier)
+                    # Log failed login to security logger
+                    auth_logger.login_failed(
+                        username=username,
+                        reason="Invalid credentials",
+                        attempts_remaining=attempts_remaining
+                    )
+                    self.show_error_dialog(
+                        "Login Failed", 
+                        f"Invalid email or password. {attempts_remaining} attempts remaining."
+                    )
+        except Exception as e:
+            print(f"LOGIN ERROR: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            self.show_error_dialog("Login Error", f"An error occurred: {str(e)}")
     
     def handle_create_account(self, username, email, password):
         """Handle create account"""
@@ -554,10 +582,28 @@ class HonestBallotApp:
 
 def main(page: ft.Page):
     """Main function to run the app"""
-    app = HonestBallotApp()
-    page.theme_mode = ft.ThemeMode.LIGHT
-    app.main(page)
+    import sys
+    import traceback
+    
+    def handle_exception(exc_type, exc_value, exc_tb):
+        print(f"UNHANDLED EXCEPTION: {exc_type.__name__}: {exc_value}")
+        traceback.print_exception(exc_type, exc_value, exc_tb)
+    
+    sys.excepthook = handle_exception
+    
+    try:
+        app = HonestBallotApp()
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.on_error = lambda e: print(f"PAGE ERROR: {e.data}")
+        app.main(page)
+    except Exception as e:
+        print(f"MAIN ERROR: {type(e).__name__}: {e}")
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    import os
+    # Set shorter temp path to avoid Windows path length issues
+    os.environ["FLET_VIEW_PATH"] = "C:\\Temp\\flet"
+    # Use desktop mode to avoid browser issues
+    ft.app(target=main, view=ft.AppView.FLET_APP)

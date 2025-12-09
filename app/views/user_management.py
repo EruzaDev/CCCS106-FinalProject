@@ -1,6 +1,7 @@
 import flet as ft
 import base64
 import os
+from app.theme import AppTheme
 
 
 # Dropdown options for positions and parties
@@ -80,7 +81,11 @@ class UserManagement(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=24,
             ),
         ]
@@ -100,7 +105,7 @@ class UserManagement(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#4CAF50",
+                                bgcolor=AppTheme.PRIMARY,
                                 border_radius=8,
                                 padding=8,
                             ),

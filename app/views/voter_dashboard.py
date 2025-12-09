@@ -1,5 +1,6 @@
 import flet as ft
 from app.components.news_feed import NewsFeed
+from app.theme import AppTheme
 
 
 class VoterDashboard(ft.Column):
@@ -69,6 +70,8 @@ class VoterDashboard(ft.Column):
         # Determine content based on current tab
         if self.current_tab == "news":
             main_content = self._build_news_feed_content()
+        elif self.current_tab == "records":
+            main_content = self._build_legal_records_content()
         else:
             main_content = self._build_candidates_content()
         
@@ -84,7 +87,7 @@ class VoterDashboard(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                bgcolor=AppTheme.BG_PRIMARY,
                 padding=20,
             ),
         ]
@@ -97,6 +100,194 @@ class VoterDashboard(ft.Column):
         self.news_feed = NewsFeed(self.db)
         return self.news_feed
     
+    def _build_legal_records_content(self):
+        """Build the legal records tab content (read-only view for voters)"""
+        # Get all legal records
+        records = self.db.get_all_legal_records() if self.db else []
+        
+        # Header
+        header = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.GAVEL, color=AppTheme.PRIMARY, size=28),
+                    ft.Text(
+                        "Politician Legal Records",
+                        size=24,
+                        weight=ft.FontWeight.BOLD,
+                        color=AppTheme.TEXT_PRIMARY,
+                    ),
+                ], spacing=12),
+                ft.Text(
+                    "View verified and pending legal records of politicians. These records are maintained by NBI officers.",
+                    size=14,
+                    color=AppTheme.TEXT_MUTED,
+                ),
+            ], spacing=8),
+            padding=ft.padding.only(bottom=20),
+        )
+        
+        # Stats row
+        verified_count = len([r for r in records if r[6] == "verified"])
+        pending_count = len([r for r in records if r[6] == "pending"])
+        dismissed_count = len([r for r in records if r[6] == "dismissed"])
+        
+        stats_row = ft.Container(
+            content=ft.Row([
+                self._build_record_stat_card("Total Records", len(records), ft.Icons.DESCRIPTION, AppTheme.PRIMARY),
+                self._build_record_stat_card("Verified", verified_count, ft.Icons.VERIFIED, "#4CAF50"),
+                self._build_record_stat_card("Pending", pending_count, ft.Icons.PENDING, "#FF9800"),
+                self._build_record_stat_card("Dismissed", dismissed_count, ft.Icons.CANCEL, "#9E9E9E"),
+            ], spacing=16, wrap=True),
+            padding=ft.padding.only(bottom=24),
+        )
+        
+        # Records list
+        if not records:
+            records_content = ft.Container(
+                content=ft.Column([
+                    ft.Icon(ft.Icons.INFO_OUTLINE, size=48, color=AppTheme.TEXT_MUTED),
+                    ft.Text(
+                        "No legal records found",
+                        size=16,
+                        color=AppTheme.TEXT_MUTED,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+                padding=40,
+                alignment=ft.alignment.center,
+            )
+        else:
+            record_cards = []
+            for record in records:
+                # record: (id, politician_id, record_type, title, description, record_date, status, created_at, full_name, username, position, party, profile_image)
+                record_id = record[0]
+                record_type = record[2]
+                title = record[3]
+                description = record[4]
+                record_date = record[5]
+                status = record[6]
+                politician_name = record[8] or record[9] or "Unknown"
+                position = record[10] or "N/A"
+                party = record[11] or "N/A"
+                
+                # Status styling
+                if status == "verified":
+                    status_color = "#4CAF50"
+                    status_icon = ft.Icons.VERIFIED
+                    status_bg = "#E8F5E9"
+                elif status == "dismissed":
+                    status_color = "#9E9E9E"
+                    status_icon = ft.Icons.CANCEL
+                    status_bg = "#F5F5F5"
+                else:  # pending
+                    status_color = "#FF9800"
+                    status_icon = ft.Icons.PENDING
+                    status_bg = "#FFF3E0"
+                
+                # Record type styling
+                type_colors = {
+                    "criminal": "#F44336",
+                    "civil": "#2196F3",
+                    "administrative": "#FF9800",
+                    "regulatory": "#9C27B0",
+                }
+                type_color = type_colors.get(record_type, "#757575")
+                
+                card = ft.Container(
+                    content=ft.Column([
+                        # Header row with politician info and status
+                        ft.Row([
+                            ft.Column([
+                                ft.Text(
+                                    politician_name,
+                                    size=16,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=AppTheme.TEXT_PRIMARY,
+                                ),
+                                ft.Text(
+                                    f"{position} • {party}",
+                                    size=12,
+                                    color=AppTheme.TEXT_MUTED,
+                                ),
+                            ], spacing=2, expand=True),
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Icon(status_icon, size=14, color=status_color),
+                                    ft.Text(status.capitalize(), size=12, color=status_color, weight=ft.FontWeight.W_500),
+                                ], spacing=4),
+                                bgcolor=status_bg,
+                                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                                border_radius=12,
+                            ),
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        
+                        ft.Divider(height=1, color=AppTheme.BORDER_LIGHT),
+                        
+                        # Record details
+                        ft.Row([
+                            ft.Container(
+                                content=ft.Text(
+                                    record_type.capitalize() if record_type else "Unknown",
+                                    size=11,
+                                    color=ft.Colors.WHITE,
+                                    weight=ft.FontWeight.W_500,
+                                ),
+                                bgcolor=type_color,
+                                padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                                border_radius=4,
+                            ),
+                            ft.Text(f"Date: {record_date or 'N/A'}", size=12, color=AppTheme.TEXT_MUTED),
+                        ], spacing=12),
+                        
+                        ft.Text(
+                            title or "No Title",
+                            size=14,
+                            weight=ft.FontWeight.W_600,
+                            color=AppTheme.TEXT_PRIMARY,
+                        ),
+                        
+                        ft.Text(
+                            description or "No description available",
+                            size=13,
+                            color=AppTheme.TEXT_SECONDARY,
+                        ),
+                    ], spacing=10),
+                    bgcolor=ft.Colors.WHITE,
+                    padding=16,
+                    border_radius=12,
+                    border=ft.border.all(1, AppTheme.BORDER_LIGHT),
+                )
+                record_cards.append(card)
+            
+            records_content = ft.Column(record_cards, spacing=12)
+        
+        return ft.Column([
+            header,
+            stats_row,
+            records_content,
+        ], spacing=0)
+    
+    def _build_record_stat_card(self, label, count, icon, color):
+        """Build a stat card for legal records"""
+        return ft.Container(
+            content=ft.Row([
+                ft.Container(
+                    content=ft.Icon(icon, color=color, size=20),
+                    bgcolor=f"{color}20",
+                    padding=8,
+                    border_radius=8,
+                ),
+                ft.Column([
+                    ft.Text(str(count), size=20, weight=ft.FontWeight.BOLD, color=AppTheme.TEXT_PRIMARY),
+                    ft.Text(label, size=11, color=AppTheme.TEXT_MUTED),
+                ], spacing=0),
+            ], spacing=12),
+            bgcolor=ft.Colors.WHITE,
+            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+            border_radius=10,
+            border=ft.border.all(1, AppTheme.BORDER_LIGHT),
+        )
+
     def _build_candidates_content(self):
         """Build the candidates tab content (original _build_content)"""
         # Get filtered politicians
@@ -106,11 +297,11 @@ class VoterDashboard(ft.Column):
         self.search_field = ft.TextField(
             hint_text="Search candidates by name, position, or party...",
             prefix_icon=ft.Icons.SEARCH,
-            border_radius=8,
-            height=45,
-            bgcolor=ft.Colors.WHITE,
-            border_color="#E0E0E0",
-            focused_border_color="#5C6BC0",
+            border_radius=12,
+            height=50,
+            bgcolor=AppTheme.BG_CARD,
+            border_color=AppTheme.BORDER_LIGHT,
+            focused_border_color=AppTheme.PRIMARY,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=12),
             on_change=self._on_search_change,
             value=self.search_query,
@@ -150,7 +341,7 @@ class VoterDashboard(ft.Column):
                 ],
                 spacing=4,
             ),
-            bgcolor="#4CAF50",
+            bgcolor=AppTheme.SUCCESS,
             padding=ft.padding.symmetric(horizontal=12, vertical=6),
             border_radius=16,
             visible=self.voting_active,
@@ -167,40 +358,51 @@ class VoterDashboard(ft.Column):
                                     color=ft.Colors.WHITE,
                                     size=24,
                                 ),
-                                bgcolor="#5C6BC0",
-                                border_radius=8,
-                                padding=8,
+                                bgcolor=AppTheme.PRIMARY,
+                                border_radius=10,
+                                padding=10,
+                                shadow=ft.BoxShadow(
+                                    spread_radius=0,
+                                    blur_radius=8,
+                                    color=ft.Colors.with_opacity(0.3, AppTheme.PRIMARY),
+                                ),
                             ),
                             ft.Column(
                                 [
                                     ft.Text(
                                         "HonestBallot",
-                                        size=20,
+                                        size=22,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Welcome, {self.username}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_MUTED,
                                     ),
                                 ],
                                 spacing=2,
                             ),
                         ],
-                        spacing=12,
+                        spacing=14,
                     ),
                     ft.Row(
                         [
                             voting_badge,
                             ft.Container(width=16),
-                            ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
-                            ft.TextButton(
-                                "Logout",
-                                on_click=lambda e: self.on_logout(),
-                                style=ft.ButtonStyle(
-                                    color="#5C6BC0",
+                            ft.Container(
+                                content=ft.Row(
+                                    [
+                                        ft.Icon(ft.Icons.LOGOUT, color=AppTheme.PRIMARY, size=18),
+                                        ft.Text("Logout", color=AppTheme.PRIMARY, size=14),
+                                    ],
+                                    spacing=6,
                                 ),
+                                padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                                border_radius=20,
+                                bgcolor=AppTheme.SURFACE_LIGHT,
+                                on_click=lambda e: self.on_logout(),
+                                ink=True,
                             ),
                         ],
                         spacing=4,
@@ -209,8 +411,8 @@ class VoterDashboard(ft.Column):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
             padding=ft.padding.symmetric(horizontal=24, vertical=16),
-            bgcolor=ft.Colors.WHITE,
-            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            bgcolor=AppTheme.BG_CARD,
+            border=ft.border.only(bottom=ft.BorderSide(1, AppTheme.BORDER_LIGHT)),
         )
     
     def _build_tab_bar(self):
@@ -222,22 +424,23 @@ class VoterDashboard(ft.Column):
                     [
                         ft.Icon(
                             icon,
-                            color="#5C6BC0" if is_selected else ft.Colors.GREY_600,
+                            color=AppTheme.PRIMARY if is_selected else AppTheme.TEXT_MUTED,
                             size=20,
                         ),
                         ft.Text(
                             label,
                             size=14,
                             weight=ft.FontWeight.W_600 if is_selected else ft.FontWeight.NORMAL,
-                            color="#5C6BC0" if is_selected else ft.Colors.GREY_600,
+                            color=AppTheme.PRIMARY if is_selected else AppTheme.TEXT_MUTED,
                         ),
                     ],
                     spacing=8,
                 ),
                 padding=ft.padding.symmetric(horizontal=20, vertical=12),
                 border=ft.border.only(
-                    bottom=ft.BorderSide(3, "#5C6BC0") if is_selected else None
+                    bottom=ft.BorderSide(3, AppTheme.PRIMARY) if is_selected else None
                 ),
+                bgcolor=AppTheme.SURFACE_LIGHT if is_selected else None,
                 on_click=lambda e, t=tab_id: self._switch_tab(t),
                 ink=True,
             )
@@ -247,11 +450,12 @@ class VoterDashboard(ft.Column):
                 [
                     create_tab(ft.Icons.PEOPLE, "Candidates", "candidates"),
                     create_tab(ft.Icons.NEWSPAPER, "News Feed", "news"),
+                    create_tab(ft.Icons.GAVEL, "Legal Records", "records"),
                 ],
                 spacing=0,
             ),
             bgcolor=ft.Colors.WHITE,
-            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            border=ft.border.only(bottom=ft.BorderSide(1, AppTheme.BORDER_COLOR)),
             padding=ft.padding.only(left=24),
         )
     
@@ -297,19 +501,19 @@ class VoterDashboard(ft.Column):
                 [
                     ft.Row(
                         [
-                            ft.Icon(ft.Icons.COMPARE_ARROWS, color="#5C6BC0", size=24),
+                            ft.Icon(ft.Icons.COMPARE_ARROWS, color=AppTheme.PRIMARY, size=24),
                             ft.Column(
                                 [
                                     ft.Text(
                                         "Compare Mode Active",
                                         size=14,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Select another {self.selected_for_compare['position']} candidate to compare with {selected_name}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -331,9 +535,9 @@ class VoterDashboard(ft.Column):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
             padding=16,
-            bgcolor="#E8EAF6",
+            bgcolor=AppTheme.BG_PRIMARY,
             border_radius=12,
-            border=ft.border.all(2, "#5C6BC0"),
+            border=ft.border.all(2, AppTheme.PRIMARY),
         )
     
     def _on_search_change(self, e):
@@ -355,8 +559,8 @@ class VoterDashboard(ft.Column):
             return ft.Container(
                 content=ft.Column(
                     [
-                        ft.Icon(ft.Icons.PEOPLE_OUTLINE, size=64, color="#CCCCCC"),
-                        ft.Text("No candidates found", size=16, color="#666666"),
+                        ft.Icon(ft.Icons.PEOPLE_OUTLINE, size=64, color=AppTheme.BORDER_COLOR),
+                        ft.Text("No candidates found", size=16, color=AppTheme.TEXT_SECONDARY),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=12,
@@ -429,8 +633,8 @@ class VoterDashboard(ft.Column):
             )
         else:
             profile_image = ft.Container(
-                content=ft.Icon(ft.Icons.PERSON, size=60, color="#CCCCCC"),
-                bgcolor="#E8EAF6",
+                content=ft.Icon(ft.Icons.PERSON, size=60, color=AppTheme.BORDER_COLOR),
+                bgcolor=AppTheme.BG_PRIMARY,
                 height=CARD_IMAGE_HEIGHT,
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
@@ -467,8 +671,8 @@ class VoterDashboard(ft.Column):
         )
         
         # Compare button - different style when selected
-        compare_icon_color = ft.Colors.WHITE if is_selected else "#5C6BC0"
-        compare_bg = "#5C6BC0" if is_selected else ft.Colors.with_opacity(0.9, ft.Colors.WHITE)
+        compare_icon_color = ft.Colors.WHITE if is_selected else AppTheme.PRIMARY
+        compare_bg = AppTheme.PRIMARY if is_selected else ft.Colors.with_opacity(0.9, ft.Colors.WHITE)
         
         compare_checkbox = ft.Container(
             content=ft.IconButton(
@@ -483,8 +687,8 @@ class VoterDashboard(ft.Column):
         )
         
         # Card styling - highlight if selected
-        card_border = ft.border.all(3, "#5C6BC0") if is_selected else None
-        card_shadow_color = ft.Colors.with_opacity(0.3, "#5C6BC0") if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
+        card_border = ft.border.all(3, AppTheme.PRIMARY) if is_selected else None
+        card_shadow_color = ft.Colors.with_opacity(0.3, AppTheme.PRIMARY) if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
         
         # Truncate biography to consistent length
         bio_display = biography[:70] + "..." if len(biography) > 70 else biography
@@ -525,13 +729,13 @@ class VoterDashboard(ft.Column):
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
-                                ft.Text(position, size=12, color="#5C6BC0"),
-                                ft.Text(party, size=11, color="#666666"),
+                                ft.Text(position, size=12, color=AppTheme.PRIMARY),
+                                ft.Text(party, size=11, color=AppTheme.TEXT_SECONDARY),
                                 ft.Container(height=4),
                                 ft.Text(
                                     bio_display,
                                     size=11,
-                                    color="#666666",
+                                    color=AppTheme.TEXT_SECONDARY,
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
@@ -539,7 +743,7 @@ class VoterDashboard(ft.Column):
                                 ft.Row(
                                     [
                                         ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
-                                        ft.Text(f"{verified_count} Verified", size=11, color="#666666"),
+                                        ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
                                     ],
                                     spacing=4,
                                 ),
@@ -549,7 +753,7 @@ class VoterDashboard(ft.Column):
                                         ft.ElevatedButton(
                                             "View Profile",
                                             icon=ft.Icons.PERSON,
-                                            bgcolor="#5C6BC0",
+                                            bgcolor=AppTheme.PRIMARY,
                                             color=ft.Colors.WHITE,
                                             style=ft.ButtonStyle(
                                                 shape=ft.RoundedRectangleBorder(radius=8),
@@ -559,8 +763,8 @@ class VoterDashboard(ft.Column):
                                         ),
                                         ft.IconButton(
                                             icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
-                                            icon_color=ft.Colors.WHITE if is_selected else "#5C6BC0",
-                                            bgcolor="#5C6BC0" if is_selected else None,
+                                            icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
+                                            bgcolor=AppTheme.PRIMARY if is_selected else None,
                                             tooltip="Remove from compare" if is_selected else "Compare",
                                             on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
                                         ),
@@ -571,7 +775,7 @@ class VoterDashboard(ft.Column):
                             expand=True,
                         ),
                         padding=12,
-                        bgcolor="#F5F5FF" if is_selected else None,
+                        bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
                         expand=True,
                     ),
                 ],

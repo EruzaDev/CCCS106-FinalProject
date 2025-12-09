@@ -1,4 +1,5 @@
 import flet as ft
+from app.theme import AppTheme
 
 
 class SignupPage(ft.Column):
@@ -11,17 +12,23 @@ class SignupPage(ft.Column):
         self.on_create_account = on_create_account
         self.on_signin = on_signin
         
-        # Form fields
+        # Form fields with theme styling
         self.username_field = ft.TextField(
             label="Username",
             width=300,
             icon=ft.Icons.PERSON,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
+            cursor_color=AppTheme.PRIMARY,
         )
         
         self.email_field = ft.TextField(
             label="Email",
             width=300,
             icon=ft.Icons.EMAIL,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
+            cursor_color=AppTheme.PRIMARY,
         )
         
         self.password_field = ft.TextField(
@@ -29,6 +36,9 @@ class SignupPage(ft.Column):
             password=True,
             width=300,
             icon=ft.Icons.LOCK,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
+            cursor_color=AppTheme.PRIMARY,
         )
         
         self.confirm_password_field = ft.TextField(
@@ -36,6 +46,9 @@ class SignupPage(ft.Column):
             password=True,
             width=300,
             icon=ft.Icons.LOCK,
+            border_color=AppTheme.BORDER_COLOR,
+            focused_border_color=AppTheme.PRIMARY,
+            cursor_color=AppTheme.PRIMARY,
         )
         
         self.error_text = ft.Text(
@@ -53,14 +66,14 @@ class SignupPage(ft.Column):
                             "HonestBallot",
                             size=40,
                             weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.BLUE,
+                            color=AppTheme.PRIMARY,
                         ),
                         ft.Text(
                             "Create Your Account",
                             size=16,
-                            color=ft.Colors.GREY,
+                            color=AppTheme.TEXT_SECONDARY,
                         ),
-                        ft.Divider(height=20),
+                        ft.Divider(height=20, color=AppTheme.BORDER_COLOR),
                         self.username_field,
                         self.email_field,
                         self.password_field,
@@ -70,12 +83,20 @@ class SignupPage(ft.Column):
                             text="Create Account",
                             width=300,
                             icon=ft.Icons.PERSON_ADD,
+                            bgcolor=AppTheme.PRIMARY,
+                            color=ft.Colors.WHITE,
+                            style=ft.ButtonStyle(
+                                shape=ft.RoundedRectangleBorder(radius=8),
+                                shadow_color=AppTheme.PRIMARY,
+                                elevation=4,
+                            ),
                             on_click=self._handle_signup,
                         ),
-                        ft.Divider(height=10),
-                        ft.Text("Already have an account?", text_align=ft.TextAlign.CENTER),
+                        ft.Divider(height=10, color=AppTheme.BORDER_COLOR),
+                        ft.Text("Already have an account?", text_align=ft.TextAlign.CENTER, color=AppTheme.TEXT_SECONDARY),
                         ft.TextButton(
                             text="Sign In",
+                            style=ft.ButtonStyle(color=AppTheme.PRIMARY),
                             on_click=lambda e: self.on_signin(),
                         ),
                     ],
@@ -83,6 +104,13 @@ class SignupPage(ft.Column):
                     spacing=10,
                 ),
                 padding=50,
+                bgcolor=ft.Colors.WHITE,
+                border_radius=16,
+                shadow=ft.BoxShadow(
+                    spread_radius=0,
+                    blur_radius=20,
+                    color=ft.Colors.with_opacity(0.1, AppTheme.PRIMARY),
+                ),
             )
         ]
         

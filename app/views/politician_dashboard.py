@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
+from app.theme import AppTheme
 from components.date_picker_field import DatePickerField
 
 
@@ -84,7 +85,11 @@ class PoliticianDashboard(ft.Column):
                     expand=True,
                 ),
                 expand=True,
-                bgcolor="#F5F5F5",
+                gradient=ft.LinearGradient(
+                    begin=ft.alignment.top_center,
+                    end=ft.alignment.bottom_center,
+                    colors=[AppTheme.BG_SECONDARY, AppTheme.BG_PRIMARY],
+                ),
                 padding=20,
             ),
         ]
@@ -113,7 +118,7 @@ class PoliticianDashboard(ft.Column):
                                 ),
                                 width=40,
                                 height=40,
-                                bgcolor="#9C27B0" if not self.politician.get("profile_image") else None,
+                                bgcolor=AppTheme.PRIMARY if not self.politician.get("profile_image") else None,
                                 border_radius=20,
                                 alignment=ft.alignment.center,
                                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -124,12 +129,12 @@ class PoliticianDashboard(ft.Column):
                                         "Politician Dashboard",
                                         size=18,
                                         weight=ft.FontWeight.BOLD,
-                                        color="#333333",
+                                        color=AppTheme.TEXT_PRIMARY,
                                     ),
                                     ft.Text(
                                         f"Welcome, {self.politician['full_name'] or self.username}",
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -141,16 +146,16 @@ class PoliticianDashboard(ft.Column):
                         [
                             ft.IconButton(
                                 icon=ft.Icons.HISTORY,
-                                icon_color="#5C6BC0",
+                                icon_color=AppTheme.PRIMARY,
                                 tooltip="Audit Logs",
                                 on_click=lambda e: self.on_audit_log() if self.on_audit_log else None,
                             ),
-                            ft.Icon(ft.Icons.LOGOUT, color="#5C6BC0", size=18),
+                            ft.Icon(ft.Icons.LOGOUT, color=AppTheme.PRIMARY, size=18),
                             ft.TextButton(
                                 "Logout",
                                 on_click=lambda e: self.on_logout(),
                                 style=ft.ButtonStyle(
-                                    color="#5C6BC0",
+                                    color=AppTheme.PRIMARY,
                                 ),
                             ),
                         ],
@@ -161,14 +166,19 @@ class PoliticianDashboard(ft.Column):
             ),
             padding=ft.padding.symmetric(horizontal=24, vertical=16),
             bgcolor=ft.Colors.WHITE,
-            border=ft.border.only(bottom=ft.BorderSide(1, "#E0E0E0")),
+            border=ft.border.only(bottom=ft.BorderSide(1, AppTheme.BORDER_COLOR)),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
+            ),
         )
     
     def _build_content(self):
         """Build main content area"""
         if not self.politician:
             return ft.Container(
-                content=ft.Text("Politician data not found", color="#666666"),
+                content=ft.Text("Politician data not found", color=AppTheme.TEXT_SECONDARY),
                 padding=40,
                 alignment=ft.alignment.center,
             )
@@ -222,7 +232,7 @@ class PoliticianDashboard(ft.Column):
                 ),
                 width=80,
                 height=80,
-                bgcolor="#9C27B0",
+                bgcolor=AppTheme.PRIMARY,
                 border_radius=40,
                 alignment=ft.alignment.center,
             )
@@ -274,13 +284,13 @@ class PoliticianDashboard(ft.Column):
                                         ],
                                         spacing=8,
                                     ),
-                                    ft.Text(position, size=14, color="#5C6BC0"),
-                                    ft.Text(party, size=12, color="#666666"),
+                                    ft.Text(position, size=14, color=AppTheme.PRIMARY),
+                                    ft.Text(party, size=12, color=AppTheme.TEXT_SECONDARY),
                                     ft.Container(height=4),
                                     ft.Text(
                                         biography[:100] + "..." if len(biography) > 100 else biography,
                                         size=12,
-                                        color="#666666",
+                                        color=AppTheme.TEXT_SECONDARY,
                                     ),
                                 ],
                                 spacing=2,
@@ -292,7 +302,7 @@ class PoliticianDashboard(ft.Column):
                     ft.TextButton(
                         "Edit Profile",
                         icon=ft.Icons.EDIT,
-                        style=ft.ButtonStyle(color="#5C6BC0"),
+                        style=ft.ButtonStyle(color=AppTheme.PRIMARY),
                         on_click=lambda e: self._toggle_edit_profile(),
                     ),
                 ],
@@ -304,7 +314,7 @@ class PoliticianDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color=ft.Colors.with_opacity(0.1, AppTheme.PRIMARY),
             ),
         )
     
@@ -317,7 +327,7 @@ class PoliticianDashboard(ft.Column):
         return ft.ResponsiveRow(
             [
                 ft.Container(
-                    content=self._build_stat_card("Total Achievements", str(total), ft.Icons.EMOJI_EVENTS, "#5C6BC0"),
+                    content=self._build_stat_card("Total Achievements", str(total), ft.Icons.EMOJI_EVENTS, AppTheme.PRIMARY),
                     col={"xs": 12, "sm": 6, "md": 4},
                 ),
                 ft.Container(
@@ -338,7 +348,7 @@ class PoliticianDashboard(ft.Column):
         return ft.Container(
             content=ft.Column(
                 [
-                    ft.Text(label, size=12, color="#666666"),
+                    ft.Text(label, size=12, color=AppTheme.TEXT_SECONDARY),
                     ft.Container(height=8),
                     ft.Row(
                         [
@@ -416,9 +426,9 @@ class PoliticianDashboard(ft.Column):
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Icon(ft.Icons.EMOJI_EVENTS, color="#CCCCCC", size=48),
-                            ft.Text("No achievements yet", color="#666666", size=14),
-                            ft.Text("Click 'Add Achievement' to submit your first achievement.", color="#999999", size=12),
+                            ft.Icon(ft.Icons.EMOJI_EVENTS, color=AppTheme.BORDER_COLOR, size=48),
+                            ft.Text("No achievements yet", color=AppTheme.TEXT_SECONDARY, size=14),
+                            ft.Text("Click 'Add Achievement' to submit your first achievement.", color=AppTheme.TEXT_SECONDARY, size=12),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=8,
@@ -504,7 +514,7 @@ class PoliticianDashboard(ft.Column):
                         [
                             ft.ElevatedButton(
                                 "Submit for Verification",
-                                bgcolor="#5C6BC0",
+                                bgcolor=AppTheme.PRIMARY,
                                 color=ft.Colors.WHITE,
                                 style=ft.ButtonStyle(
                                     shape=ft.RoundedRectangleBorder(radius=8),
@@ -524,9 +534,9 @@ class PoliticianDashboard(ft.Column):
                 ],
             ),
             padding=16,
-            bgcolor="#FAFAFA",
+            bgcolor=AppTheme.BG_SECONDARY,
             border_radius=8,
-            border=ft.border.all(1, "#E0E0E0"),
+            border=ft.border.all(1, AppTheme.BORDER_COLOR),
         )
     
     def _build_achievement_item(self, ver_id, title, description, status, created_at):
@@ -588,13 +598,13 @@ class PoliticianDashboard(ft.Column):
                             ft.Text(
                                 description if description else "No description provided.",
                                 size=12,
-                                color="#666666",
+                                color=AppTheme.TEXT_SECONDARY,
                             ),
                             ft.Row(
                                 [
-                                    ft.Icon(ft.Icons.CALENDAR_TODAY, size=12, color="#999999"),
-                                    ft.Text(formatted_date, size=11, color="#999999"),
-                                    ft.Text(verified_by_text, size=11, color="#999999") if verified_by_text else ft.Container(),
+                                    ft.Icon(ft.Icons.CALENDAR_TODAY, size=12, color=AppTheme.TEXT_SECONDARY),
+                                    ft.Text(formatted_date, size=11, color=AppTheme.TEXT_SECONDARY),
+                                    ft.Text(verified_by_text, size=11, color=AppTheme.TEXT_SECONDARY) if verified_by_text else ft.Container(),
                                 ],
                                 spacing=8,
                             ),
@@ -729,12 +739,12 @@ class PoliticianDashboard(ft.Column):
                         ft.Column(
                             [
                                 ft.Text("Profile Picture", size=14, weight=ft.FontWeight.W_500),
-                                ft.Text("Upload a professional photo", size=12, color="#666666"),
+                                ft.Text("Upload a professional photo", size=12, color=AppTheme.TEXT_SECONDARY),
                                 ft.ElevatedButton(
                                     "Choose Image",
                                     icon=ft.Icons.UPLOAD,
-                                    bgcolor="#E8EAF6",
-                                    color="#5C6BC0",
+                                    bgcolor=AppTheme.BG_PRIMARY,
+                                    color=AppTheme.PRIMARY,
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=8),
                                     ),
@@ -994,7 +1004,7 @@ class PoliticianDashboard(ft.Column):
                     ft.Text(
                         "Share campaign updates and news with voters",
                         size=12,
-                        color="#666666",
+                        color=AppTheme.TEXT_SECONDARY,
                     ),
                     ft.Container(height=16),
                     NewsPostCreator(
@@ -1020,7 +1030,7 @@ class PoliticianDashboard(ft.Column):
             ),
         )
     
-    def _on_news_post_created(self):
+    def _on_news_post_created(self, post_id=None):
         """Handle news post created event"""
         # Rebuild UI to show updated posts
         self._build_ui()
