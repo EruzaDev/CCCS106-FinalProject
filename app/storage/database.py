@@ -1031,8 +1031,8 @@ class Database:
             # Define what each role can see
             role_permissions = {
                 'comelec': ['all'],  # COMELEC can see everything
-                'nbi': ['legal_record', 'login', 'logout'],  # NBI sees legal records and auth
-                'politician': ['verification', 'legal_record', 'vote_result'],  # Politicians see their related logs
+                'nbi': ['legal_record', 'legal_record_edit', 'legal_record_status', 'login', 'logout'],  # NBI sees legal records and auth
+                'politician': ['verification', 'legal_record', 'legal_record_edit', 'legal_record_status', 'vote_result'],  # Politicians see their related logs
             }
         
             allowed_types = role_permissions.get(viewer_role, [])

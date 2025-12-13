@@ -880,6 +880,18 @@ class NBIDashboard(ft.Column):
     def _verify_record(self, record):
         """Verify a legal record"""
         self.db.update_legal_record_status(record["id"], "verified", self.current_user_id)
+        
+        # Log the action
+        self.db.log_action(
+            action="Legal Record Verified",
+            action_type="legal_record_status",
+            description=f"Verified record: {record['title']}",
+            user_id=self.current_user_id,
+            user_role="nbi",
+            target_type="legal_record",
+            target_id=record["id"],
+        )
+        
         self._refresh_records()
         self._show_success("Record verified successfully")
     
@@ -953,14 +965,31 @@ class NBIDashboard(ft.Column):
             )
             
             # Update status if changed
+            status_changed = False
             if edit_status_dropdown.value != record["status"]:
                 self.db.update_legal_record_status(
                     record["id"],
                     edit_status_dropdown.value,
                     self.current_user_id,
                 )
+                status_changed = True
             
             if success:
+                # Log the action
+                description = f"Updated record: {edit_title_field.value}"
+                if status_changed:
+                    description += f" (status changed to {edit_status_dropdown.value})"
+                
+                self.db.log_action(
+                    action="Legal Record Updated",
+                    action_type="legal_record_edit",
+                    description=description,
+                    user_id=self.current_user_id,
+                    user_role="nbi",
+                    target_type="legal_record",
+                    target_id=record["id"],
+                )
+                
                 close_dialog(e)
                 self._refresh_records()
                 self._show_success("Record updated successfully")
