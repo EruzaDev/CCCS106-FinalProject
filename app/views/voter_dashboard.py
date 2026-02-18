@@ -1,6 +1,7 @@
 import flet as ft
 from app.components.news_feed import NewsFeed
 from app.theme import AppTheme
+from app.components.empty_state import EmptyState
 
 
 class VoterDashboard(ft.Column):
@@ -143,18 +144,11 @@ class VoterDashboard(ft.Column):
         
         # Records list
         if not records:
-            records_content = ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.INFO_OUTLINE, size=48, color=AppTheme.TEXT_MUTED),
-                    ft.Text(
-                        "No legal records found",
-                        size=16,
-                        color=AppTheme.TEXT_MUTED,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                padding=40,
-                alignment=ft.alignment.center,
+            records_content = EmptyState(
+                icon=ft.Icons.GAVEL,
+                title="No Legal Records",
+                subtitle="No legal records have been filed yet. Check back once NBI officers have added verified records.",
+                icon_color=AppTheme.PRIMARY,
             )
         else:
             record_cards = []
@@ -556,17 +550,11 @@ class VoterDashboard(ft.Column):
     def _build_candidate_grid(self, politicians):
         """Build responsive grid of candidate cards"""
         if not politicians:
-            return ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Icon(ft.Icons.PEOPLE_OUTLINE, size=64, color=AppTheme.BORDER_COLOR),
-                        ft.Text("No candidates found", size=16, color=AppTheme.TEXT_SECONDARY),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
-                ),
-                padding=40,
-                alignment=ft.alignment.center,
+            return EmptyState(
+                icon=ft.Icons.PEOPLE_OUTLINE,
+                title="No Candidates Found",
+                subtitle="No candidates match your search. Try adjusting your filters or check back later.",
+                icon_color=AppTheme.PRIMARY,
             )
         
         # Create responsive cards using ResponsiveRow

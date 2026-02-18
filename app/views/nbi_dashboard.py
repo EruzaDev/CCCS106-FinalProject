@@ -4,6 +4,7 @@ from app.components.news_post_creator import NewsPostCreator, MyPostsList
 from app.theme import AppTheme
 from components.date_picker_field import DatePickerField
 from app.components.loading_overlay import LoadingOverlay
+from app.components.empty_state import EmptyState
 
 
 class NBIDashboard(ft.Column):
@@ -118,9 +119,13 @@ class NBIDashboard(ft.Column):
         
         if not records:
             self.records_list_column.controls.append(
-                ft.Container(
-                    content=ft.Text("No legal records found", color="#666666"),
-                    padding=20,
+                EmptyState(
+                    icon=ft.Icons.GAVEL,
+                    title="No Legal Records",
+                    subtitle="No legal records have been filed yet. Use the 'Add Record' button to create one.",
+                    btn_label="Add Record",
+                    on_btn_click=lambda: self._show_add_record_form(None),
+                    compact=True,
                 )
             )
             return
@@ -730,9 +735,11 @@ class NBIDashboard(ft.Column):
                     politician_cards.append(self._build_politician_card(pol_data))
         
         if not politician_cards:
-            return ft.Container(
-                content=ft.Text("No politicians found", color="#666666"),
-                padding=20,
+            return EmptyState(
+                icon=ft.Icons.PERSON_SEARCH,
+                title="No Politicians Found",
+                subtitle="No politician accounts exist yet. Ask COMELEC to add politicians via User Management.",
+                compact=True,
             )
         
         return ft.Column(politician_cards, spacing=12)

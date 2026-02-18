@@ -1,5 +1,6 @@
 import flet as ft
 from app.theme import AppTheme
+from app.components.empty_state import EmptyState
 
 
 class ElectionResults(ft.Column):
@@ -344,26 +345,15 @@ class ElectionResults(ft.Column):
     def _build_no_votes_message(self):
         """Build message when no votes have been cast"""
         return ft.Container(
-            content=ft.Column(
-                [
-                    ft.Icon(ft.Icons.HOW_TO_VOTE, size=64, color="#CCCCCC"),
-                    ft.Container(height=16),
-                    ft.Text("No Votes Yet", size=18, weight=ft.FontWeight.BOLD, color="#666666"),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "No votes have been cast yet. Results will appear once voting begins.",
-                        size=14,
-                        color="#999999",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            content=EmptyState(
+                icon=ft.Icons.HOW_TO_VOTE,
+                title="No Votes Yet",
+                subtitle="No votes have been cast yet. Results will appear here once the voting session begins and voters participate.",
+                icon_color=AppTheme.PRIMARY,
             ),
-            padding=60,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             margin=ft.margin.only(top=20),
-            alignment=ft.alignment.center,
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,

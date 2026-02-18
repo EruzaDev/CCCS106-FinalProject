@@ -2,6 +2,7 @@ import flet as ft
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
 from app.theme import AppTheme
 from app.components.loading_overlay import LoadingOverlay
+from app.components.empty_state import EmptyState
 
 
 class ComelecDashboard(ft.Column):
@@ -495,10 +496,13 @@ class ComelecDashboard(ft.Column):
             )
         
         if not rows:
-            return ft.Container(
-                content=ft.Text("No candidates found. Add politicians in User Management.", color="#666666"),
-                padding=20,
-                alignment=ft.alignment.center,
+            return EmptyState(
+                icon=ft.Icons.BALLOT_OUTLINED,
+                title="No Candidates Registered",
+                subtitle="No politician accounts exist yet. Add politicians via User Management to populate the ballot.",
+                btn_label="Go to User Management",
+                on_btn_click=self.on_user_management if hasattr(self, 'on_user_management') else None,
+                compact=True,
             )
         
         return ft.DataTable(
