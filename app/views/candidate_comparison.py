@@ -165,12 +165,10 @@ class CandidateComparison(ft.Column):
                         ft.Container(
                             content=self._build_candidate_card(self.candidate1),
                             expand=True,
-                            min_width=260,
                         ),
                         ft.Container(
                             content=self._build_candidate_card(self.candidate2),
                             expand=True,
-                            min_width=260,
                         ),
                     ],
                     spacing=20,

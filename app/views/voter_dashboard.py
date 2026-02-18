@@ -358,7 +358,7 @@ class VoterDashboard(ft.Column):
                                 shadow=ft.BoxShadow(
                                     spread_radius=0,
                                     blur_radius=8,
-                                    color=ft.Colors.with_opacity(0.3, AppTheme.PRIMARY),
+                                    color="#4D2196F3",
                                 ),
                             ),
                             ft.Column(
@@ -675,7 +675,7 @@ class VoterDashboard(ft.Column):
         
         # Card styling - highlight if selected
         card_border = ft.border.all(3, AppTheme.PRIMARY) if is_selected else None
-        card_shadow_color = ft.Colors.with_opacity(0.3, AppTheme.PRIMARY) if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
+        card_shadow_color = "#4D2196F3" if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
         
         # Truncate biography to consistent length
         bio_display = biography[:70] + "..." if len(biography) > 70 else biography

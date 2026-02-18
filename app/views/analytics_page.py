@@ -121,7 +121,7 @@ class AnalyticsPage(ft.Column):
                             ],
                             spacing=4,
                         ),
-                        bgcolor=ft.Colors.with_opacity(0.1, "#FF9800"),
+                        bgcolor="#1AFF9800",
                         padding=ft.padding.symmetric(horizontal=12, vertical=6),
                         border_radius=16,
                     ),
@@ -311,7 +311,7 @@ class AnalyticsPage(ft.Column):
             match_chips.append(
                 ft.Container(
                     content=ft.Text(area, size=10, color="#5C6BC0"),
-                    bgcolor=ft.Colors.with_opacity(0.1, "#5C6BC0"),
+                    bgcolor="#1A5C6BC0",
                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
                     border_radius=10,
                 )
@@ -417,7 +417,7 @@ class AnalyticsPage(ft.Column):
                 strength_chips.append(
                     ft.Container(
                         content=ft.Text(strength, size=9, color="#5C6BC0"),
-                        bgcolor=ft.Colors.with_opacity(0.1, "#5C6BC0"),
+                        bgcolor="#1A5C6BC0",
                         padding=ft.padding.symmetric(horizontal=6, vertical=2),
                         border_radius=8,
                     )
@@ -546,7 +546,6 @@ class AnalyticsPage(ft.Column):
                                     show_values=True,
                                 ),
                                 expand=True,
-                                min_width=280,
                             ),
                             
                             # Party distribution chart
@@ -557,7 +556,6 @@ class AnalyticsPage(ft.Column):
                                     show_legend=True,
                                 ),
                                 expand=True,
-                                min_width=280,
                             ),
                         ],
                         spacing=16,
@@ -573,7 +571,6 @@ class AnalyticsPage(ft.Column):
                                     title="Achievement Verifications",
                                 ),
                                 expand=True,
-                                min_width=280,
                             ),
                             
                             # Legal records chart
@@ -583,7 +580,6 @@ class AnalyticsPage(ft.Column):
                                     title="Legal Records Status",
                                 ),
                                 expand=True,
-                                min_width=280,
                             ),
                         ],
                         spacing=16,
@@ -646,7 +642,7 @@ class AnalyticsPage(ft.Column):
                                     ],
                                     spacing=4,
                                 ),
-                                bgcolor=ft.Colors.with_opacity(0.1, "#FF9800"),
+                                bgcolor="#1AFF9800",
                                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
                                 border_radius=12,
                             ),

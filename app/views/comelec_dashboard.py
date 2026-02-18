@@ -144,7 +144,7 @@ class ComelecDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
+                color="#142196F3",
             ),
         )
     
@@ -273,7 +273,7 @@ class ComelecDashboard(ft.Column):
             padding=20,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            min_width=160,
+            width=180,
             ink=True,
             on_click=on_click,
             shadow=ft.BoxShadow(
@@ -318,7 +318,7 @@ class ComelecDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=2,
-                color=ft.Colors.with_opacity(0.05, AppTheme.PRIMARY),
+                color="#0D2196F3",
             ),
         )
     

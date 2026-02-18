@@ -113,7 +113,7 @@ class HomePage(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.1, AppTheme.PRIMARY),
+                color="#1A2196F3",
             ),
         )
     
@@ -144,7 +144,7 @@ class HomePage(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=8,
-                color=ft.Colors.with_opacity(0.08, AppTheme.PRIMARY),
+                color="#142196F3",
             ),
             border=ft.border.all(1, AppTheme.BORDER_COLOR),
         )

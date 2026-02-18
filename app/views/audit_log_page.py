@@ -199,7 +199,6 @@ class AuditLogPage(ft.Column):
                 offset=ft.Offset(0, 2),
             ),
             expand=True,
-            min_width=160,
         )
     
     def _build_filters_section(self):

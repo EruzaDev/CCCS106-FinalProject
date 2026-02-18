@@ -122,7 +122,7 @@ class LoginPage(ft.Container):
                         shadow=ft.BoxShadow(
                             spread_radius=0,
                             blur_radius=15,
-                            color=ft.Colors.with_opacity(0.3, AppTheme.PRIMARY),
+                            color="#4D2196F3",
                             offset=ft.Offset(0, 5),
                         ),
                     ),
@@ -209,7 +209,7 @@ class LoginPage(ft.Container):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=25,
-                color=ft.Colors.with_opacity(0.1, AppTheme.PRIMARY),
+                color="#1A2196F3",
                 offset=ft.Offset(0, 10),
             ),
         )

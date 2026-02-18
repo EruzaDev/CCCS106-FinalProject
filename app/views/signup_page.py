@@ -100,7 +100,7 @@ class SignupPage(ft.Column):
                 shadow=ft.BoxShadow(
                     spread_radius=0,
                     blur_radius=20,
-                    color=ft.Colors.with_opacity(0.1, AppTheme.PRIMARY),
+                    color="#1A2196F3",
                 ),
             )
         ]
