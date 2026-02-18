@@ -109,7 +109,7 @@ class NBIDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=10,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     
@@ -399,7 +399,7 @@ class NBIDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=10,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     
@@ -442,7 +442,7 @@ class NBIDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=10,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     
@@ -664,7 +664,7 @@ class NBIDashboard(ft.Column):
                 shadow=ft.BoxShadow(
                     spread_radius=0,
                     blur_radius=10,
-                    color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                    color="#1A000000",
                 ),
             )
         except Exception as e:
@@ -1087,7 +1087,7 @@ class NBIDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     

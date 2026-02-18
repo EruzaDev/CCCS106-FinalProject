@@ -659,7 +659,7 @@ class VoterDashboard(ft.Column):
         
         # Compare button - different style when selected
         compare_icon_color = ft.Colors.WHITE if is_selected else AppTheme.PRIMARY
-        compare_bg = AppTheme.PRIMARY if is_selected else ft.Colors.with_opacity(0.9, ft.Colors.WHITE)
+        compare_bg = AppTheme.PRIMARY if is_selected else "#E6FFFFFF"
         
         compare_checkbox = ft.Container(
             content=ft.IconButton(
@@ -675,7 +675,7 @@ class VoterDashboard(ft.Column):
         
         # Card styling - highlight if selected
         card_border = ft.border.all(3, AppTheme.PRIMARY) if is_selected else None
-        card_shadow_color = "#4D2196F3" if is_selected else ft.Colors.with_opacity(0.1, ft.Colors.BLACK)
+        card_shadow_color = "#4D2196F3" if is_selected else "#1A000000"
         
         # Truncate biography to consistent length
         bio_display = biography[:70] + "..." if len(biography) > 70 else biography
@@ -762,7 +762,6 @@ class VoterDashboard(ft.Column):
                         ),
                         padding=12,
                         bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
-                        expand=True,
                     ),
                 ],
                 spacing=0,

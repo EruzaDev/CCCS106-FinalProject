@@ -274,7 +274,7 @@ class VotingPage(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
+                color="#0D000000",
             ),
         )
     
@@ -362,7 +362,7 @@ class VotingPage(ft.Column):
                 shadow=ft.BoxShadow(
                     spread_radius=0,
                     blur_radius=4,
-                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                    color="#14000000",
                 ),
                 border_radius=12,
                 border=ft.border.all(2, "#4CAF50") if is_voted else None,
@@ -374,7 +374,7 @@ class VotingPage(ft.Column):
                 shadow=ft.BoxShadow(
                     spread_radius=0,
                     blur_radius=4,
-                    color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                    color="#14000000",
                 ),
                 border_radius=12,
                 border=ft.border.all(2, "#4CAF50") if is_voted else None,

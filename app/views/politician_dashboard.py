@@ -354,7 +354,7 @@ class PoliticianDashboard(ft.Column):
                         [
                             ft.Container(
                                 content=ft.Icon(icon, color=color, size=24),
-                                bgcolor=ft.Colors.with_opacity(0.1, color),
+                                bgcolor="#1A" + color[1:] if color.startswith("#") and len(color) == 7 else "#1A2196F3",
                                 border_radius=20,
                                 padding=8,
                             ),
@@ -373,7 +373,7 @@ class PoliticianDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
+                color="#0D000000",
             ),
         )
     
@@ -410,7 +410,7 @@ class PoliticianDashboard(ft.Column):
                 shadow=ft.BoxShadow(
                     spread_radius=0,
                     blur_radius=4,
-                    color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                    color="#1A000000",
                 ),
             )
         
@@ -471,7 +471,7 @@ class PoliticianDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     
@@ -1026,7 +1026,7 @@ class PoliticianDashboard(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     

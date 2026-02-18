@@ -204,7 +204,7 @@ class ElectionResults(ft.Column):
                 spacing=4,
             ),
             padding=ft.padding.symmetric(horizontal=20, vertical=12),
-            bgcolor=ft.Colors.with_opacity(0.2, ft.Colors.WHITE),
+            bgcolor="#33FFFFFF",
             border_radius=8,
             expand=True,
         )
@@ -254,7 +254,7 @@ class ElectionResults(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
     
@@ -357,6 +357,6 @@ class ElectionResults(ft.Column):
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=4,
-                color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
+                color="#1A000000",
             ),
         )
