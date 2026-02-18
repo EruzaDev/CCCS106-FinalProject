@@ -1,5 +1,6 @@
 import flet as ft
 from app.theme import AppTheme
+from app.components.loading_overlay import ButtonLoadingState
 
 
 class LoginPage(ft.Container):
@@ -10,6 +11,8 @@ class LoginPage(ft.Container):
         self.on_login_callback = on_login
         self.on_create_account = on_create_account
         self.on_forgot_password = on_forgot_password
+        self._login_btn = None
+        self._login_btn_state = None
         
         # Form fields with theme styling
         self.username_field = ft.TextField(
@@ -154,19 +157,8 @@ class LoginPage(ft.Container):
                     
                     ft.Container(height=15),
                     
-                    # Login button
-                    ft.ElevatedButton(
-                        text="Sign In",
-                        width=300,
-                        height=50,
-                        bgcolor=AppTheme.PRIMARY,
-                        color=ft.Colors.WHITE,
-                        style=ft.ButtonStyle(
-                            shape=ft.RoundedRectangleBorder(radius=10),
-                            elevation=3,
-                        ),
-                        on_click=self._handle_login,
-                    ),
+                    # Login button – stored so we can swap to loading state
+                    self._build_login_btn(),
                     
                     ft.Container(height=15),
                     
@@ -219,6 +211,23 @@ class LoginPage(ft.Container):
             ),
         )
     
+    def _build_login_btn(self):
+        """Create the Sign In button and attach loading-state helper."""
+        self._login_btn = ft.ElevatedButton(
+            text="Sign In",
+            width=300,
+            height=50,
+            bgcolor=AppTheme.PRIMARY,
+            color=ft.Colors.WHITE,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=10),
+                elevation=3,
+            ),
+            on_click=self._handle_login,
+        )
+        self._login_btn_state = ButtonLoadingState(self._login_btn, "Sign In", "Signing in…")
+        return self._login_btn
+
     def _handle_login(self, e):
         """Handle login button click"""
         username = self.username_field.value.strip() if self.username_field.value else ""
@@ -228,6 +237,21 @@ class LoginPage(ft.Container):
             self.error_text.value = "Please fill all fields"
             self.update()
             return
-        
-        self.on_login_callback(username, password)
+
+        # Show loading state
+        if self._login_btn_state:
+            self._login_btn_state.set_loading(True)
+        if self.page:
+            self.page.update()
+
+        try:
+            self.on_login_callback(username, password)
+        finally:
+            # Restore button (in case login failed and page wasn't replaced)
+            if self._login_btn_state:
+                self._login_btn_state.set_loading(False)
+            try:
+                self.update()
+            except Exception:
+                pass
 

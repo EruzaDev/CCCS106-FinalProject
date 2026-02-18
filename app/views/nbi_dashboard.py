@@ -3,6 +3,7 @@ from datetime import datetime
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
 from app.theme import AppTheme
 from components.date_picker_field import DatePickerField
+from app.components.loading_overlay import LoadingOverlay
 
 
 class NBIDashboard(ft.Column):
@@ -31,9 +32,22 @@ class NBIDashboard(ft.Column):
         self.record_description_field = None
         self.record_date_field = None
         
+        # Loading overlay
+        self._loading_overlay = LoadingOverlay()
+
         # Build UI
         self._build_ui()
-    
+
+    def did_mount(self):
+        if self.page and self._loading_overlay not in self.page.overlay:
+            self.page.overlay.append(self._loading_overlay)
+            self.page.update()
+
+    def will_unmount(self):
+        if self.page and self._loading_overlay in self.page.overlay:
+            self.page.overlay.remove(self._loading_overlay)
+            self.page.update()
+
     def _build_ui(self):
         """Build the main UI"""
         self.controls = [
@@ -568,6 +582,11 @@ class NBIDashboard(ft.Column):
             self._show_error("Please enter a title")
             return
         
+        # Show loading
+        self._loading_overlay.show("Saving legal record…")
+        if self.page:
+            self.page.update()
+
         # Create the record
         record_id = self.db.create_legal_record(
             politician_id=int(self.politician_dropdown.value),
@@ -578,6 +597,10 @@ class NBIDashboard(ft.Column):
             added_by=self.current_user_id,
         )
         
+        self._loading_overlay.hide()
+        if self.page:
+            self.page.update()
+
         if record_id:
             # Log the action
             self.db.log_action(

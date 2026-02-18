@@ -8,6 +8,7 @@ from app.components.charts import (
 )
 from app.services.ai_service import AIService, RecommendationEngine
 from app.theme import AppTheme
+from app.components.loading_overlay import LoadingOverlay, InlineSpinner
 
 
 class AnalyticsPage(ft.Column):
@@ -29,9 +30,22 @@ class AnalyticsPage(ft.Column):
         # User preferences for recommendations
         self.user_preferences = []
         self.preference_chips = []
+
+        # Loading overlay for AI operations
+        self._loading_overlay = LoadingOverlay()
         
         # Build UI
         self._build_ui()
+
+    def did_mount(self):
+        if self.page and self._loading_overlay not in self.page.overlay:
+            self.page.overlay.append(self._loading_overlay)
+            self.page.update()
+
+    def will_unmount(self):
+        if self.page and self._loading_overlay in self.page.overlay:
+            self.page.overlay.remove(self._loading_overlay)
+            self.page.update()
     
     def _build_ui(self):
         """Build the main UI"""
@@ -650,9 +664,17 @@ class AnalyticsPage(ft.Column):
             self.user_preferences.remove(pref_key)
         else:
             self.user_preferences.append(pref_key)
-        
+
+        # Show loading while AI recommendations recalculate
+        self._loading_overlay.show("Generating AI recommendations…")
+        if self.page:
+            self.page.update()
+
         # Rebuild UI
         self._build_ui()
+
+        # Hide overlay
+        self._loading_overlay.hide()
         if self.page:
             self.page.update()
     

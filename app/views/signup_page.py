@@ -1,5 +1,6 @@
 import flet as ft
 from app.theme import AppTheme
+from app.components.loading_overlay import ButtonLoadingState
 
 
 class SignupPage(ft.Column):
@@ -11,6 +12,8 @@ class SignupPage(ft.Column):
         self.on_apple_signin = on_apple_signin
         self.on_create_account = on_create_account
         self.on_signin = on_signin
+        self._signup_btn = None
+        self._signup_btn_state = None
         
         # Form fields with theme styling
         self.username_field = ft.TextField(
@@ -79,19 +82,7 @@ class SignupPage(ft.Column):
                         self.password_field,
                         self.confirm_password_field,
                         self.error_text,
-                        ft.ElevatedButton(
-                            text="Create Account",
-                            width=300,
-                            icon=ft.Icons.PERSON_ADD,
-                            bgcolor=AppTheme.PRIMARY,
-                            color=ft.Colors.WHITE,
-                            style=ft.ButtonStyle(
-                                shape=ft.RoundedRectangleBorder(radius=8),
-                                shadow_color=AppTheme.PRIMARY,
-                                elevation=4,
-                            ),
-                            on_click=self._handle_signup,
-                        ),
+                        self._build_signup_btn(),
                         ft.Divider(height=10, color=AppTheme.BORDER_COLOR),
                         ft.Text("Already have an account?", text_align=ft.TextAlign.CENTER, color=AppTheme.TEXT_SECONDARY),
                         ft.TextButton(
@@ -118,6 +109,24 @@ class SignupPage(ft.Column):
         self.vertical_alignment = ft.MainAxisAlignment.CENTER
         self.expand = True
     
+    def _build_signup_btn(self):
+        """Create the Create Account button with loading-state support."""
+        self._signup_btn = ft.ElevatedButton(
+            text="Create Account",
+            width=300,
+            icon=ft.Icons.PERSON_ADD,
+            bgcolor=AppTheme.PRIMARY,
+            color=ft.Colors.WHITE,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                shadow_color=AppTheme.PRIMARY,
+                elevation=4,
+            ),
+            on_click=self._handle_signup,
+        )
+        self._signup_btn_state = ButtonLoadingState(self._signup_btn, "Create Account", "Creating account…")
+        return self._signup_btn
+
     def _handle_signup(self, e):
         """Handle signup button click"""
         username = self.username_field.value.strip()
@@ -139,5 +148,19 @@ class SignupPage(ft.Column):
             self.error_text.value = "Password must be at least 6 characters"
             self.update()
             return
-        
-        self.on_create_account(username, email, password)
+
+        # Show loading state on button
+        if self._signup_btn_state:
+            self._signup_btn_state.set_loading(True)
+        if self.page:
+            self.page.update()
+
+        try:
+            self.on_create_account(username, email, password)
+        finally:
+            if self._signup_btn_state:
+                self._signup_btn_state.set_loading(False)
+            try:
+                self.update()
+            except Exception:
+                pass
