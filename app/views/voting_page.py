@@ -1,5 +1,6 @@
 import flet as ft
 from app.theme import AppTheme
+from app.components.loading_overlay import LoadingOverlay
 
 
 class VotingPage(ft.Column):
@@ -26,6 +27,9 @@ class VotingPage(ft.Column):
         
         # Check for existing votes
         self._load_existing_votes()
+
+        # Loading overlay (added to page.overlay on did_mount)
+        self._loading_overlay = LoadingOverlay()
         
         # Build UI
         self._build_ui()
@@ -34,11 +38,19 @@ class VotingPage(ft.Column):
         """Called when the control is added to the page - subscribe to voting updates"""
         if self.page:
             self.page.pubsub.subscribe(self._on_voting_status_change)
+            # Attach loading overlay to page overlay so it sits above everything
+            if self._loading_overlay not in self.page.overlay:
+                self.page.overlay.append(self._loading_overlay)
+                self.page.update()
     
     def will_unmount(self):
         """Called when the control is about to be removed - unsubscribe"""
         if self.page:
             self.page.pubsub.unsubscribe()
+            # Remove our overlay
+            if self._loading_overlay in self.page.overlay:
+                self.page.overlay.remove(self._loading_overlay)
+                self.page.update()
     
     def _on_voting_status_change(self, message):
         """Handle voting status change broadcast from COMELEC"""
@@ -530,6 +542,12 @@ class VotingPage(ft.Column):
     
     def _submit_vote(self, position, candidate_id, is_update=False):
         """Submit vote for a position"""
+        # Show loading overlay
+        action_label = "Updating vote…" if is_update else "Submitting vote…"
+        self._loading_overlay.show(action_label)
+        if self.page:
+            self.page.update()
+
         # Record the vote
         self.votes[position] = candidate_id
         self.submitted_positions.add(position)
@@ -544,6 +562,9 @@ class VotingPage(ft.Column):
             except Exception as e:
                 print(f"Error casting vote: {e}")
         
+        # Hide loading overlay
+        self._loading_overlay.hide()
+
         # Exit change vote mode if active
         self.change_vote_mode.discard(position)
         

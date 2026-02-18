@@ -1,6 +1,7 @@
 import flet as ft
 from app.components.news_post_creator import NewsPostCreator, MyPostsList
 from app.theme import AppTheme
+from app.components.loading_overlay import LoadingOverlay
 
 
 class ComelecDashboard(ft.Column):
@@ -28,10 +29,25 @@ class ComelecDashboard(ft.Column):
         # Get voting status from database
         status = self.db.get_voting_status() if self.db else {"is_active": False}
         self.voting_active = status["is_active"]
+
+        # Loading overlay
+        self._loading_overlay = LoadingOverlay()
         
         # Build UI
         self._build_ui()
     
+    def did_mount(self):
+        """Attach loading overlay to page overlay when mounted."""
+        if self.page and self._loading_overlay not in self.page.overlay:
+            self.page.overlay.append(self._loading_overlay)
+            self.page.update()
+
+    def will_unmount(self):
+        """Remove loading overlay when unmounted."""
+        if self.page and self._loading_overlay in self.page.overlay:
+            self.page.overlay.remove(self._loading_overlay)
+            self.page.update()
+
     def _build_ui(self):
         """Build the main UI"""
         self.controls = [
@@ -678,6 +694,11 @@ class ComelecDashboard(ft.Column):
     
     def _toggle_voting(self):
         """Toggle voting status"""
+        action_label = "Stopping voting session…" if self.voting_active else "Starting voting session…"
+        self._loading_overlay.show(action_label)
+        if self.page:
+            self.page.update()
+
         if self.db:
             if self.voting_active:
                 self.db.stop_voting(self.current_user_id)
@@ -708,6 +729,9 @@ class ComelecDashboard(ft.Column):
                 "type": "voting_status_changed",
                 "is_active": self.voting_active
             })
+
+        # Hide loading overlay before rebuild
+        self._loading_overlay.hide()
         
         self._build_ui()
         if self.page:

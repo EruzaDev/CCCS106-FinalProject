@@ -2,6 +2,7 @@ import flet as ft
 import base64
 import os
 from app.theme import AppTheme
+from app.components.loading_overlay import LoadingOverlay
 
 
 # Dropdown options for positions and parties
@@ -58,9 +59,22 @@ class UserManagement(ft.Column):
         # Politician image data
         self.politician_image_data = None
         self.politician_image_path = None
+
+        # Loading overlay
+        self._loading_overlay = LoadingOverlay()
         
         # Build UI
         self._build_ui()
+
+    def did_mount(self):
+        if self.page and self._loading_overlay not in self.page.overlay:
+            self.page.overlay.append(self._loading_overlay)
+            self.page.update()
+
+    def will_unmount(self):
+        if self.page and self._loading_overlay in self.page.overlay:
+            self.page.overlay.remove(self._loading_overlay)
+            self.page.update()
     
     def _build_ui(self):
         """Build the main UI"""
@@ -824,6 +838,10 @@ class UserManagement(ft.Column):
         if not all([name, username, email]):
             self._show_error("Please fill all required fields")
             return
+
+        self._loading_overlay.show("Saving voter account…")
+        if self.page:
+            self.page.update()
         
         if self.editing_user_id:
             # Update existing voter
@@ -833,6 +851,8 @@ class UserManagement(ft.Column):
             else:
                 # Update without changing password
                 success = self.db.update_voter(self.editing_user_id, name, email, username)
+
+            self._loading_overlay.hide()
             
             if success:
                 self.show_voter_form = False
@@ -845,10 +865,12 @@ class UserManagement(ft.Column):
         else:
             # Create new voter
             if not password:
+                self._loading_overlay.hide()
                 self._show_error("Password is required for new accounts")
                 return
             
             success = self.db.create_voter(username, email, password, name)
+            self._loading_overlay.hide()
             if success:
                 self.show_voter_form = False
                 self._refresh_ui()
@@ -869,6 +891,10 @@ class UserManagement(ft.Column):
         if not all([name, email, position, party, username, biography]):
             self._show_error("Please fill all required fields")
             return
+
+        self._loading_overlay.show("Saving politician account…")
+        if self.page:
+            self.page.update()
         
         if self.editing_user_id:
             # Update existing politician
@@ -880,6 +906,8 @@ class UserManagement(ft.Column):
                 success = self.db.update_politician(
                     self.editing_user_id, name, email, username, position, party, biography, self.politician_image_data
                 )
+
+            self._loading_overlay.hide()
             
             if success:
                 self.show_politician_form = False
@@ -894,12 +922,14 @@ class UserManagement(ft.Column):
         else:
             # Create new politician
             if not password:
+                self._loading_overlay.hide()
                 self._show_error("Password is required for new accounts")
                 return
             
             success = self.db.create_politician(
                 username, email, password, name, position, party, biography, self.politician_image_data
             )
+            self._loading_overlay.hide()
             if success:
                 self.show_politician_form = False
                 self.politician_image_data = None
