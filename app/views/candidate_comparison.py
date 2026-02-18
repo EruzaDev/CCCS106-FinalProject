@@ -162,11 +162,20 @@ class CandidateComparison(ft.Column):
                 # Comparison cards side by side
                 ft.Row(
                     [
-                        self._build_candidate_card(self.candidate1),
-                        self._build_candidate_card(self.candidate2),
+                        ft.Container(
+                            content=self._build_candidate_card(self.candidate1),
+                            expand=True,
+                            min_width=260,
+                        ),
+                        ft.Container(
+                            content=self._build_candidate_card(self.candidate2),
+                            expand=True,
+                            min_width=260,
+                        ),
                     ],
                     spacing=20,
                     alignment=ft.MainAxisAlignment.CENTER,
+                    wrap=True,
                 ),
             ],
         )
