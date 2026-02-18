@@ -47,8 +47,8 @@ class HonestBallotApp:
         page.bgcolor = ft.Colors.GREY_100
         page.window.width = 1280
         page.window.height = 800
-        page.window.min_width = 1024
-        page.window.min_height = 600
+        page.window.min_width = 860   # Lowered to allow compact-screen use
+        page.window.min_height = 560
         page.padding = 0
         page.spacing = 0
         

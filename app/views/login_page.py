@@ -23,6 +23,7 @@ class LoginPage(ft.Container):
             cursor_color=AppTheme.PRIMARY,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             prefix_icon=ft.Icons.PERSON_OUTLINE,
+            expand=False,
         )
         
         self.password_field = ft.TextField(
@@ -38,6 +39,7 @@ class LoginPage(ft.Container):
             cursor_color=AppTheme.PRIMARY,
             content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
             prefix_icon=ft.Icons.LOCK_OUTLINE,
+            expand=False,
         )
         
         self.error_text = ft.Text(
@@ -206,8 +208,9 @@ class LoginPage(ft.Container):
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
             ),
+            # Responsive card: max 420px wide, shrinks on small windows
             width=420,
-            padding=45,
+            padding=ft.padding.symmetric(horizontal=40, vertical=45),
             bgcolor=AppTheme.BG_CARD,
             border_radius=20,
             border=ft.border.all(1, AppTheme.BORDER_LIGHT),

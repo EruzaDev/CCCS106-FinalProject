@@ -197,7 +197,8 @@ class AuditLogPage(ft.Column):
                 color=ft.Colors.with_opacity(0.1, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
-            width=200,
+            expand=True,
+            min_width=160,
         )
     
     def _build_filters_section(self):
@@ -232,6 +233,7 @@ class AuditLogPage(ft.Column):
                 for value, label in filter_options
             ],
             spacing=8,
+            wrap=True,
         )
         
         # Date range filter
@@ -256,6 +258,7 @@ class AuditLogPage(ft.Column):
                 for value, label in date_options
             ],
             spacing=8,
+            wrap=True,
         )
         
         return ft.Container(

@@ -348,6 +348,7 @@ class NBIDashboard(ft.Column):
                 ),
             ],
             spacing=20,
+            wrap=True,
         )
     
     def _build_stat_card(self, title, value, icon, color):

@@ -235,6 +235,7 @@ class ComelecDashboard(ft.Column):
                             ),
                         ],
                         spacing=16,
+                        wrap=True,
                     ),
                 ],
             ),
@@ -255,7 +256,7 @@ class ComelecDashboard(ft.Column):
             padding=20,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
-            width=200,
+            min_width=160,
             ink=True,
             on_click=on_click,
             shadow=ft.BoxShadow(
@@ -279,6 +280,7 @@ class ComelecDashboard(ft.Column):
                 self._build_stat_card("Verified", str(total_candidates), ft.Icons.VERIFIED, "#4CAF50"),
             ],
             spacing=16,
+            wrap=True,
         )
     
     def _build_stat_card(self, label, value, icon, color):
@@ -852,7 +854,7 @@ class ComelecDashboard(ft.Column):
                     ],
                     spacing=8,
                 ),
-                width=500,
+                width=None,
                 height=400,
             ),
             actions=[

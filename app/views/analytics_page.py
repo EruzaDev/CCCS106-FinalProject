@@ -532,6 +532,7 @@ class AnalyticsPage(ft.Column):
                                     show_values=True,
                                 ),
                                 expand=True,
+                                min_width=280,
                             ),
                             
                             # Party distribution chart
@@ -542,9 +543,11 @@ class AnalyticsPage(ft.Column):
                                     show_legend=True,
                                 ),
                                 expand=True,
+                                min_width=280,
                             ),
                         ],
                         spacing=16,
+                        wrap=True,
                     ),
                     ft.Container(height=16),
                     ft.Row(
@@ -556,6 +559,7 @@ class AnalyticsPage(ft.Column):
                                     title="Achievement Verifications",
                                 ),
                                 expand=True,
+                                min_width=280,
                             ),
                             
                             # Legal records chart
@@ -565,6 +569,7 @@ class AnalyticsPage(ft.Column):
                                     title="Legal Records Status",
                                 ),
                                 expand=True,
+                                min_width=280,
                             ),
                         ],
                         spacing=16,
@@ -609,7 +614,7 @@ class AnalyticsPage(ft.Column):
                             expand=True,
                         )
                     )
-            insight_rows.append(ft.Row(row_cards, spacing=16))
+            insight_rows.append(ft.Row(row_cards, spacing=16, wrap=True))
         
         return ft.Container(
             content=ft.Column(
