@@ -2,6 +2,7 @@ import flet as ft
 import base64
 import os
 from app.theme import AppTheme
+from app.components.empty_state import EmptyState
 
 
 # Dropdown options for positions and parties
@@ -430,10 +431,13 @@ class UserManagement(ft.Column):
             )
         
         if not rows:
-            return ft.Container(
-                content=ft.Text("No voter accounts found", color="#666666"),
-                padding=20,
-                alignment=ft.alignment.center,
+            return EmptyState(
+                icon=ft.Icons.PERSON_OUTLINE,
+                title="No Voter Accounts Yet",
+                subtitle="No voter accounts have been created. Use the 'Add Voter' button above to get started.",
+                btn_label="Add Voter",
+                on_btn_click=self._toggle_voter_form,
+                compact=True,
             )
         
         return ft.DataTable(
@@ -717,10 +721,13 @@ class UserManagement(ft.Column):
             )
         
         if not rows:
-            return ft.Container(
-                content=ft.Text("No politician accounts found", color="#666666"),
-                padding=20,
-                alignment=ft.alignment.center,
+            return EmptyState(
+                icon=ft.Icons.ACCOUNT_BOX_OUTLINED,
+                title="No Politician Accounts Yet",
+                subtitle="No politician accounts have been created. Use the 'Add Politician' button above to register candidates.",
+                btn_label="Add Politician",
+                on_btn_click=self._toggle_politician_form,
+                compact=True,
             )
         
         return ft.DataTable(

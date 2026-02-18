@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime, timedelta
 from app.theme import AppTheme
+from app.components.empty_state import EmptyState
 
 
 class AuditLogPage(ft.Column):
@@ -391,17 +392,11 @@ class AuditLogPage(ft.Column):
     def _build_logs_list(self, logs):
         """Build the list of log entries"""
         if not logs:
-            return ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Icon(ft.Icons.HISTORY, size=48, color="#CCCCCC"),
-                        ft.Text("No audit logs found", size=14, color="#666666"),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=8,
-                ),
-                padding=40,
-                alignment=ft.alignment.center,
+            return EmptyState(
+                icon=ft.Icons.HISTORY,
+                title="No Audit Logs Found",
+                subtitle="No system activity matches the current filters. Try broadening your search or date range.",
+                icon_color=AppTheme.PRIMARY,
             )
         
         log_items = []
