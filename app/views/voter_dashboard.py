@@ -612,12 +612,13 @@ class VoterDashboard(ft.Column):
                 content=ft.Image(
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
-                    width=float("inf"),
                     height=CARD_IMAGE_HEIGHT,
+                    expand=True,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                 height=CARD_IMAGE_HEIGHT,
+                expand=True,
             )
         else:
             profile_image = ft.Container(
@@ -735,7 +736,7 @@ class VoterDashboard(ft.Column):
                                     ],
                                     spacing=4,
                                 ),
-                                ft.Container(expand=True),  # Spacer to push buttons to bottom
+                                ft.Container(height=8),  # Spacer to push buttons to bottom
                                 ft.Row(
                                     [
                                         ft.ElevatedButton(
