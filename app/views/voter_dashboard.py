@@ -613,12 +613,10 @@ class VoterDashboard(ft.Column):
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
                     height=CARD_IMAGE_HEIGHT,
-                    expand=True,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                 height=CARD_IMAGE_HEIGHT,
-                expand=True,
             )
         else:
             profile_image = ft.Container(
@@ -761,7 +759,6 @@ class VoterDashboard(ft.Column):
                                 ),
                             ],
                             spacing=2,
-                            expand=True,
                         ),
                         padding=12,
                         bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
@@ -769,7 +766,6 @@ class VoterDashboard(ft.Column):
                     ),
                 ],
                 spacing=0,
-                expand=True,
             ),
             height=CARD_MIN_HEIGHT,
             bgcolor=ft.Colors.WHITE,
