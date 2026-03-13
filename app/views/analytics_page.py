@@ -40,12 +40,10 @@ class AnalyticsPage(ft.Column):
     def did_mount(self):
         if self.page and self._loading_overlay not in self.page.overlay:
             self.page.overlay.append(self._loading_overlay)
-            self.page.update()
 
     def will_unmount(self):
         if self.page and self._loading_overlay in self.page.overlay:
             self.page.overlay.remove(self._loading_overlay)
-            self.page.update()
     
     def _build_ui(self):
         """Build the main UI"""
@@ -545,7 +543,7 @@ class AnalyticsPage(ft.Column):
                                     title="Votes by Position",
                                     show_values=True,
                                 ),
-                                expand=True,
+                                width=420,
                             ),
                             
                             # Party distribution chart
@@ -555,7 +553,7 @@ class AnalyticsPage(ft.Column):
                                     title="Candidates by Party",
                                     show_legend=True,
                                 ),
-                                expand=True,
+                                width=420,
                             ),
                         ],
                         spacing=16,
@@ -621,7 +619,7 @@ class AnalyticsPage(ft.Column):
                                 icon=insight.get("icon", ft.Icons.LIGHTBULB),
                                 color=insight.get("color", "#5C6BC0"),
                             ),
-                            expand=True,
+                            width=400,
                         )
                     )
             insight_rows.append(ft.Row(row_cards, spacing=16, wrap=True))

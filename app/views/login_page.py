@@ -3,6 +3,9 @@ from app.theme import AppTheme
 from app.components.loading_overlay import ButtonLoadingState
 
 
+_LOGO_ASSET_NAME = "646362954_1313996230543670_9086585389723444034_n-removebg-preview.png"
+
+
 class LoginPage(ft.Container):
     """Voting app login page with blue aesthetic theme"""
     
@@ -70,14 +73,10 @@ class LoginPage(ft.Container):
                     content=ft.Row(
                         [
                             ft.Container(
-                                content=ft.Icon(
-                                    ft.Icons.HOW_TO_VOTE,
-                                    color=AppTheme.PRIMARY,
-                                    size=24,
-                                ),
+                                content=self._build_logo_image(28, 28),
                                 bgcolor=AppTheme.SURFACE_LIGHT,
                                 border_radius=8,
-                                padding=8,
+                                padding=6,
                             ),
                             ft.Text(
                                 "HonestBallot",
@@ -109,21 +108,17 @@ class LoginPage(ft.Container):
                 [
                     # Logo icon with gradient-like effect
                     ft.Container(
-                        content=ft.Icon(
-                            ft.Icons.HOW_TO_VOTE,
-                            size=45,
-                            color=ft.Colors.WHITE,
-                        ),
-                        width=80,
-                        height=80,
-                        bgcolor=AppTheme.PRIMARY,
-                        border_radius=20,
+                        content=self._build_logo_image(62, 62),
+                        width=86,
+                        height=86,
+                        bgcolor=AppTheme.SURFACE_LIGHT,
+                        border_radius=22,
                         alignment=ft.alignment.center,
                         shadow=ft.BoxShadow(
                             spread_radius=0,
-                            blur_radius=15,
-                            color="#4D2196F3",
-                            offset=ft.Offset(0, 5),
+                            blur_radius=16,
+                            color="#402196F3",
+                            offset=ft.Offset(0, 6),
                         ),
                     ),
                     
@@ -213,6 +208,15 @@ class LoginPage(ft.Container):
                 offset=ft.Offset(0, 10),
             ),
         )
+
+    def _build_logo_image(self, width, height):
+        """Build the login logo using the app asset pipeline."""
+        return ft.Image(
+            src=_LOGO_ASSET_NAME,
+            width=width,
+            height=height,
+            fit=ft.ImageFit.CONTAIN,
+        )
     
     def _build_login_btn(self):
         """Create the Sign In button and attach loading-state helper."""
@@ -251,10 +255,15 @@ class LoginPage(ft.Container):
             self.on_login_callback(username, password)
         finally:
             # Restore button (in case login failed and page wasn't replaced)
-            if self._login_btn_state:
+            if self._login_btn_state and self._is_active_view():
                 self._login_btn_state.set_loading(False)
             try:
-                self.update()
+                if self._is_active_view():
+                    self.update()
             except Exception:
                 pass
+
+    def _is_active_view(self):
+        """Return True only while this login page is still mounted as a top-level page control."""
+        return bool(self.page and self in self.page.controls)
 

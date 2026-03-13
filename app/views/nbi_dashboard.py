@@ -42,12 +42,10 @@ class NBIDashboard(ft.Column):
     def did_mount(self):
         if self.page and self._loading_overlay not in self.page.overlay:
             self.page.overlay.append(self._loading_overlay)
-            self.page.update()
 
     def will_unmount(self):
         if self.page and self._loading_overlay in self.page.overlay:
             self.page.overlay.remove(self._loading_overlay)
-            self.page.update()
 
     def _build_ui(self):
         """Build the main UI"""
@@ -207,10 +205,7 @@ class NBIDashboard(ft.Column):
     
     def _refresh_legal_records(self):
         """Refresh the legal records list"""
-        records = self.db.get_all_legal_records() if self.db else []
-        self._populate_records_list(records)
-        if self.page:
-            self.page.update()
+        self._refresh_dashboard()
     
     def _verify_legal_record(self, record_id):
         """Verify a legal record"""
@@ -223,9 +218,8 @@ class NBIDashboard(ft.Column):
                 user_id=self.current_user_id,
                 user_role="nbi",
             )
+            self._refresh_dashboard()
             self._show_success("Record verified successfully")
-            self._refresh_legal_records()
-            self._update_stats()
         except Exception as ex:
             print(f"Error verifying record: {ex}")
             self._show_error("Failed to verify record")
@@ -241,19 +235,24 @@ class NBIDashboard(ft.Column):
                 user_id=self.current_user_id,
                 user_role="nbi",
             )
+            self._refresh_dashboard()
             self._show_success("Record dismissed successfully")
-            self._refresh_legal_records()
-            self._update_stats()
         except Exception as ex:
             print(f"Error dismissing record: {ex}")
             self._show_error("Failed to dismiss record")
     
     def _update_stats(self):
         """Update the statistics display"""
-        # Rebuild UI to update stats
+        self._refresh_dashboard()
+
+    def _refresh_dashboard(self):
+        """Rebuild the active NBI dashboard sections and refresh the mounted control."""
         self._build_ui()
-        if self.page:
-            self.page.update()
+        try:
+            self.update()
+        except Exception:
+            if self.page:
+                self.page.update()
     
     def _build_header(self):
         """Build the header with NBI branding"""
@@ -395,7 +394,7 @@ class NBIDashboard(ft.Column):
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             padding=20,
-            expand=True,
+            width=260,
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=10,
@@ -619,7 +618,7 @@ class NBIDashboard(ft.Column):
                 target_id=int(self.politician_dropdown.value),
             )
             self._hide_add_record_form(None)
-            self._refresh_records()
+            self._refresh_dashboard()
             self._show_success("Record added successfully")
         else:
             self._show_error("Failed to add record")
@@ -752,7 +751,7 @@ class NBIDashboard(ft.Column):
         # Build profile image or placeholder
         if pol_data.get("profile_image"):
             profile_widget = ft.Image(
-                src=pol_data["profile_image"],
+                src_base64=pol_data["profile_image"],
                 width=50,
                 height=50,
                 fit=ft.ImageFit.COVER,
@@ -911,7 +910,7 @@ class NBIDashboard(ft.Column):
     def _verify_record(self, record):
         """Verify a legal record"""
         self.db.update_legal_record_status(record["id"], "verified", self.current_user_id)
-        self._refresh_records()
+        self._refresh_dashboard()
         self._show_success("Record verified successfully")
     
     def _show_edit_dialog(self, record):
@@ -993,7 +992,7 @@ class NBIDashboard(ft.Column):
             
             if success:
                 close_dialog(e)
-                self._refresh_records()
+                self._refresh_dashboard()
                 self._show_success("Record updated successfully")
             else:
                 self._show_error("Failed to update record")
@@ -1093,25 +1092,15 @@ class NBIDashboard(ft.Column):
     
     def _on_news_post_created(self, post_id=None):
         """Handle news post created event"""
-        # Rebuild UI to show updated posts
-        self._build_ui()
-        if self.page:
-            self.page.update()
+        self._refresh_dashboard()
     
     def _refresh_records(self):
         """Refresh the records list"""
-        if self.records_container:
-            self.records_container.controls = [self._build_records_list()]
-            self._refresh_stats()
-            if self.page:
-                self.page.update()
+        self._refresh_dashboard()
     
     def _refresh_stats(self):
         """Refresh the statistics - rebuild the UI"""
-        # For simplicity, just update the page
-        self._build_ui()
-        if self.page:
-            self.page.update()
+        self._refresh_dashboard()
     
     def _show_error(self, message):
         """Show error snackbar"""

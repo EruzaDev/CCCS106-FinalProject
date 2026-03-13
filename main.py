@@ -26,6 +26,9 @@ from app.state.session_manager import SessionManager
 from app.security_logger import auth_logger
 
 
+APP_LOGO_ASSET = "646362954_1313996230543670_9086585389723444034_n-removebg-preview.png"
+
+
 class HonestBallotApp:
     """Main application class for local voting app with session management"""
     
@@ -51,6 +54,13 @@ class HonestBallotApp:
         page.window.min_height = 560
         page.padding = 0
         page.spacing = 0
+
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", APP_LOGO_ASSET)
+        if os.path.exists(icon_path):
+            try:
+                page.window.icon = icon_path
+            except Exception as exc:
+                print(f"ICON WARNING: Could not set window icon: {exc}")
         
         # Prevent window from accidentally closing
         def on_window_event(e):
@@ -198,6 +208,7 @@ class HonestBallotApp:
     def show_comelec_dashboard(self):
         """Show the COMELEC dashboard"""
         self.page.clean()
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
@@ -251,6 +262,7 @@ class HonestBallotApp:
     def show_audit_log(self):
         """Show the Audit Log page"""
         self.page.clean()
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
@@ -281,6 +293,7 @@ class HonestBallotApp:
     def show_analytics_page(self):
         """Show the Analytics Dashboard page"""
         self.page.clean()
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
@@ -300,6 +313,7 @@ class HonestBallotApp:
     def show_election_results(self):
         """Show the Election Results page"""
         self.page.clean()
+        self.page.overlay.clear()
         
         if not self.current_session:
             self.show_login_page()
@@ -510,6 +524,11 @@ class HonestBallotApp:
         
         self.current_session = None
         self.page.session.set("current_session", None)
+        # Clear transient overlays before navigation to avoid view-removal race conditions.
+        try:
+            self.page.overlay.clear()
+        except Exception:
+            pass
         self.show_login_page()
     
     def handle_settings(self):
@@ -606,4 +625,4 @@ if __name__ == "__main__":
     # Set shorter temp path to avoid Windows path length issues
     os.environ["FLET_VIEW_PATH"] = "C:\\Temp\\flet"
     # Use desktop mode to avoid browser issues
-    ft.app(target=main, view=ft.AppView.FLET_APP)
+    ft.app(target=main, view=ft.AppView.FLET_APP, assets_dir="assets")

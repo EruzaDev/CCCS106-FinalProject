@@ -75,7 +75,6 @@ class UserManagement(ft.Column):
     def will_unmount(self):
         if self.page and self._loading_overlay in self.page.overlay:
             self.page.overlay.remove(self._loading_overlay)
-            self.page.update()
     
     def _build_ui(self):
         """Build the main UI"""

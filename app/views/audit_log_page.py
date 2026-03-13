@@ -198,7 +198,7 @@ class AuditLogPage(ft.Column):
                 color="#1A000000",
                 offset=ft.Offset(0, 2),
             ),
-            expand=True,
+            width=240,
         )
     
     def _build_filters_section(self):

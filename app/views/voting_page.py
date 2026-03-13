@@ -50,7 +50,6 @@ class VotingPage(ft.Column):
             # Remove our overlay
             if self._loading_overlay in self.page.overlay:
                 self.page.overlay.remove(self._loading_overlay)
-                self.page.update()
     
     def _on_voting_status_change(self, message):
         """Handle voting status change broadcast from COMELEC"""

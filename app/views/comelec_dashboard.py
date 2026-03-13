@@ -47,7 +47,6 @@ class ComelecDashboard(ft.Column):
         """Remove loading overlay when unmounted."""
         if self.page and self._loading_overlay in self.page.overlay:
             self.page.overlay.remove(self._loading_overlay)
-            self.page.update()
 
     def _build_ui(self):
         """Build the main UI"""
