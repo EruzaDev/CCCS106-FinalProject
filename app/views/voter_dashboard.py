@@ -605,6 +605,7 @@ class VoterDashboard(ft.Column):
         # Fixed dimensions for consistent card layout
         CARD_IMAGE_HEIGHT = 140
         CARD_MIN_HEIGHT = 380
+        CARD_BUTTON_WIDTH = 150
         
         # Create avatar/image with fixed height
         if image:
@@ -613,16 +614,19 @@ class VoterDashboard(ft.Column):
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
                     height=CARD_IMAGE_HEIGHT,
+                    width=float("inf"),
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                 height=CARD_IMAGE_HEIGHT,
+                width=float("inf"),
             )
         else:
             profile_image = ft.Container(
                 content=ft.Icon(ft.Icons.PERSON, size=60, color=AppTheme.BORDER_COLOR),
                 bgcolor=AppTheme.BG_PRIMARY,
                 height=CARD_IMAGE_HEIGHT,
+                width=float("inf"),
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
             )
@@ -704,6 +708,7 @@ class VoterDashboard(ft.Column):
                             ),
                         ],
                         height=CARD_IMAGE_HEIGHT,
+                        width=float("inf"),
                     ),
                     # Info section with fixed height
                     ft.Container(
@@ -713,16 +718,28 @@ class VoterDashboard(ft.Column):
                                     name, 
                                     size=14, 
                                     weight=ft.FontWeight.BOLD,
+                                    text_align=ft.TextAlign.CENTER,
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
-                                ft.Text(position, size=12, color=AppTheme.PRIMARY),
-                                ft.Text(party, size=11, color=AppTheme.TEXT_SECONDARY),
+                                ft.Text(
+                                    position,
+                                    size=12,
+                                    color=AppTheme.PRIMARY,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Text(
+                                    party,
+                                    size=11,
+                                    color=AppTheme.TEXT_SECONDARY,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
                                 ft.Container(height=4),
                                 ft.Text(
                                     bio_display,
                                     size=11,
                                     color=AppTheme.TEXT_SECONDARY,
+                                    text_align=ft.TextAlign.CENTER,
                                     max_lines=2,
                                     overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
@@ -733,35 +750,41 @@ class VoterDashboard(ft.Column):
                                         ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
                                     ],
                                     spacing=4,
+                                    alignment=ft.MainAxisAlignment.CENTER,
                                 ),
-                                ft.Container(height=8),  # Spacer to push buttons to bottom
-                                ft.Row(
-                                    [
-                                        ft.ElevatedButton(
-                                            "View Profile",
-                                            icon=ft.Icons.PERSON,
-                                            bgcolor=AppTheme.PRIMARY,
-                                            color=ft.Colors.WHITE,
-                                            style=ft.ButtonStyle(
-                                                shape=ft.RoundedRectangleBorder(radius=8),
-                                            ),
-                                            expand=True,
-                                            on_click=lambda e, uid=user_id: self._view_profile(uid),
+                                ft.Container(expand=True),
+                                ft.Container(
+                                    content=ft.ElevatedButton(
+                                        "View Profile",
+                                        icon=ft.Icons.PERSON,
+                                        bgcolor=AppTheme.PRIMARY,
+                                        color=ft.Colors.WHITE,
+                                        width=CARD_BUTTON_WIDTH,
+                                        style=ft.ButtonStyle(
+                                            shape=ft.RoundedRectangleBorder(radius=8),
                                         ),
-                                        ft.IconButton(
-                                            icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
-                                            icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
-                                            bgcolor=AppTheme.PRIMARY if is_selected else None,
-                                            tooltip="Remove from compare" if is_selected else "Compare",
-                                            on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
-                                        ),
-                                    ],
+                                        on_click=lambda e, uid=user_id: self._view_profile(uid),
+                                    ),
+                                    alignment=ft.alignment.center,
+                                ),
+                                ft.Container(
+                                    content=ft.IconButton(
+                                        icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
+                                        icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
+                                        bgcolor=AppTheme.PRIMARY if is_selected else None,
+                                        tooltip="Remove from compare" if is_selected else "Compare",
+                                        on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
+                                    ),
+                                    alignment=ft.alignment.center,
                                 ),
                             ],
-                            spacing=2,
+                            spacing=4,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            alignment=ft.MainAxisAlignment.START,
                         ),
                         padding=12,
                         bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
+                        expand=True,
                     ),
                 ],
                 spacing=0,
@@ -770,6 +793,7 @@ class VoterDashboard(ft.Column):
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=card_border,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
             shadow=ft.BoxShadow(
                 spread_radius=0,
                 blur_radius=12 if is_selected else 8,
