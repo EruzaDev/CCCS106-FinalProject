@@ -557,7 +557,7 @@ class VoterDashboard(ft.Column):
                 icon_color=AppTheme.PRIMARY,
             )
         
-        # Use a wrapped row for predictable card alignment without ResponsiveRow flex casting issues.
+        # Use ResponsiveRow so the dashboard keeps the original left-aligned responsive flow.
         cards = []
         
         for politician in politicians:
@@ -584,25 +584,20 @@ class VoterDashboard(ft.Column):
                 is_selected=is_selected,
             )
             
-            cards.append(card)
+            responsive_card = ft.Container(
+                content=card,
+                col={"xs": 12, "sm": 6, "md": 4, "lg": 3, "xl": 2},
+            )
+            cards.append(responsive_card)
         
-        return ft.Row(
-            controls=cards,
-            spacing=16,
-            run_spacing=16,
-            wrap=True,
-            alignment=ft.MainAxisAlignment.CENTER,
-            vertical_alignment=ft.CrossAxisAlignment.START,
-        )
+        return ft.ResponsiveRow(cards, spacing=16, run_spacing=16)
     
     def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count, is_selected=False):
         """Build a candidate card with consistent sizing"""
         # Fixed dimensions for consistent card layout
-        CARD_WIDTH = 200
         CARD_IMAGE_HEIGHT = 140
         CARD_MIN_HEIGHT = 380
-        CARD_BUTTON_WIDTH = 150
-        CARD_CONTENT_HEIGHT = CARD_MIN_HEIGHT - CARD_IMAGE_HEIGHT
+        CARD_BUTTON_WIDTH = 145
         
         # Create avatar/image with fixed height
         if image:
@@ -611,19 +606,16 @@ class VoterDashboard(ft.Column):
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
                     height=CARD_IMAGE_HEIGHT,
-                    width=CARD_WIDTH,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                 height=CARD_IMAGE_HEIGHT,
-                width=CARD_WIDTH,
             )
         else:
             profile_image = ft.Container(
                 content=ft.Icon(ft.Icons.PERSON, size=60, color=AppTheme.BORDER_COLOR),
                 bgcolor=AppTheme.BG_PRIMARY,
                 height=CARD_IMAGE_HEIGHT,
-                width=CARD_WIDTH,
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
             )
@@ -705,100 +697,86 @@ class VoterDashboard(ft.Column):
                             ),
                         ],
                         height=CARD_IMAGE_HEIGHT,
-                        width=CARD_WIDTH,
                     ),
-                    # Info section with fixed height
+                    # Info section
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Column(
+                                ft.Text(
+                                    name,
+                                    size=14,
+                                    weight=ft.FontWeight.BOLD,
+                                    text_align=ft.TextAlign.CENTER,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                                ft.Text(
+                                    position,
+                                    size=12,
+                                    color=AppTheme.PRIMARY,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Text(
+                                    party,
+                                    size=11,
+                                    color=AppTheme.TEXT_SECONDARY,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Container(height=4),
+                                ft.Text(
+                                    bio_display,
+                                    size=11,
+                                    color=AppTheme.TEXT_SECONDARY,
+                                    text_align=ft.TextAlign.CENTER,
+                                    max_lines=2,
+                                    overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                                ft.Container(height=4),
+                                ft.Row(
                                     [
-                                        ft.Text(
-                                            name, 
-                                            size=14, 
-                                            weight=ft.FontWeight.BOLD,
-                                            text_align=ft.TextAlign.CENTER,
-                                            max_lines=1,
-                                            overflow=ft.TextOverflow.ELLIPSIS,
-                                        ),
-                                        ft.Text(
-                                            position,
-                                            size=12,
-                                            color=AppTheme.PRIMARY,
-                                            text_align=ft.TextAlign.CENTER,
-                                        ),
-                                        ft.Text(
-                                            party,
-                                            size=11,
-                                            color=AppTheme.TEXT_SECONDARY,
-                                            text_align=ft.TextAlign.CENTER,
-                                        ),
-                                        ft.Container(height=4),
-                                        ft.Text(
-                                            bio_display,
-                                            size=11,
-                                            color=AppTheme.TEXT_SECONDARY,
-                                            text_align=ft.TextAlign.CENTER,
-                                            max_lines=2,
-                                            overflow=ft.TextOverflow.ELLIPSIS,
-                                        ),
-                                        ft.Container(height=4),
-                                        ft.Row(
-                                            [
-                                                ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
-                                                ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
-                                            ],
-                                            spacing=4,
-                                            alignment=ft.MainAxisAlignment.CENTER,
-                                        ),
+                                        ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
+                                        ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
                                     ],
                                     spacing=4,
-                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    alignment=ft.MainAxisAlignment.CENTER,
                                 ),
-                                ft.Column(
+                                ft.Container(height=8),
+                                ft.Row(
                                     [
-                                        ft.Container(
-                                            content=ft.ElevatedButton(
-                                                "View Profile",
-                                                icon=ft.Icons.PERSON,
-                                                bgcolor=AppTheme.PRIMARY,
-                                                color=ft.Colors.WHITE,
-                                                width=CARD_BUTTON_WIDTH,
-                                                style=ft.ButtonStyle(
-                                                    shape=ft.RoundedRectangleBorder(radius=8),
-                                                ),
-                                                on_click=lambda e, uid=user_id: self._view_profile(uid),
+                                        ft.ElevatedButton(
+                                            "View Profile",
+                                            icon=ft.Icons.PERSON,
+                                            bgcolor=AppTheme.PRIMARY,
+                                            color=ft.Colors.WHITE,
+                                            width=CARD_BUTTON_WIDTH,
+                                            style=ft.ButtonStyle(
+                                                shape=ft.RoundedRectangleBorder(radius=8),
                                             ),
-                                            alignment=ft.alignment.center,
+                                            on_click=lambda e, uid=user_id: self._view_profile(uid),
                                         ),
-                                        ft.Container(
-                                            content=ft.IconButton(
-                                                icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
-                                                icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
-                                                bgcolor=AppTheme.PRIMARY if is_selected else None,
-                                                tooltip="Remove from compare" if is_selected else "Compare",
-                                                on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
-                                            ),
-                                            alignment=ft.alignment.center,
+                                        ft.IconButton(
+                                            icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
+                                            icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
+                                            bgcolor=AppTheme.PRIMARY if is_selected else None,
+                                            tooltip="Remove from compare" if is_selected else "Compare",
+                                            on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
                                         ),
                                     ],
-                                    spacing=0,
-                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                    spacing=8,
+                                    alignment=ft.MainAxisAlignment.CENTER,
                                 ),
                             ],
-                            spacing=0,
+                            spacing=2,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            alignment=ft.MainAxisAlignment.START,
                         ),
                         padding=12,
-                        height=CARD_CONTENT_HEIGHT,
                         bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
                     ),
                 ],
                 spacing=0,
             ),
             height=CARD_MIN_HEIGHT,
-            width=CARD_WIDTH,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=card_border,
@@ -833,8 +811,11 @@ class VoterDashboard(ft.Column):
         if self.selected_for_compare["position"] == position:
             # Trigger comparison
             if self.on_compare:
-                self.on_compare(self.selected_for_compare["id"], user_id)
-            # Reset compare mode
+                first_candidate_id = self.selected_for_compare["id"]
+                self.selected_for_compare = None
+                self.compare_mode = False
+                self.on_compare(first_candidate_id, user_id)
+                return
             self._cancel_compare()
         else:
             # Different position - show error
