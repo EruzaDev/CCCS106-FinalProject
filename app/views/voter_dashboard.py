@@ -606,6 +606,7 @@ class VoterDashboard(ft.Column):
         CARD_IMAGE_HEIGHT = 140
         CARD_MIN_HEIGHT = 380
         CARD_BUTTON_WIDTH = 150
+        CARD_CONTENT_HEIGHT = CARD_MIN_HEIGHT - CARD_IMAGE_HEIGHT
         
         # Create avatar/image with fixed height
         if image:
@@ -714,77 +715,88 @@ class VoterDashboard(ft.Column):
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Text(
-                                    name, 
-                                    size=14, 
-                                    weight=ft.FontWeight.BOLD,
-                                    text_align=ft.TextAlign.CENTER,
-                                    max_lines=1,
-                                    overflow=ft.TextOverflow.ELLIPSIS,
-                                ),
-                                ft.Text(
-                                    position,
-                                    size=12,
-                                    color=AppTheme.PRIMARY,
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Text(
-                                    party,
-                                    size=11,
-                                    color=AppTheme.TEXT_SECONDARY,
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Container(height=4),
-                                ft.Text(
-                                    bio_display,
-                                    size=11,
-                                    color=AppTheme.TEXT_SECONDARY,
-                                    text_align=ft.TextAlign.CENTER,
-                                    max_lines=2,
-                                    overflow=ft.TextOverflow.ELLIPSIS,
-                                ),
-                                ft.Container(height=4),
-                                ft.Row(
+                                ft.Column(
                                     [
-                                        ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
-                                        ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
+                                        ft.Text(
+                                            name, 
+                                            size=14, 
+                                            weight=ft.FontWeight.BOLD,
+                                            text_align=ft.TextAlign.CENTER,
+                                            max_lines=1,
+                                            overflow=ft.TextOverflow.ELLIPSIS,
+                                        ),
+                                        ft.Text(
+                                            position,
+                                            size=12,
+                                            color=AppTheme.PRIMARY,
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                        ft.Text(
+                                            party,
+                                            size=11,
+                                            color=AppTheme.TEXT_SECONDARY,
+                                            text_align=ft.TextAlign.CENTER,
+                                        ),
+                                        ft.Container(height=4),
+                                        ft.Text(
+                                            bio_display,
+                                            size=11,
+                                            color=AppTheme.TEXT_SECONDARY,
+                                            text_align=ft.TextAlign.CENTER,
+                                            max_lines=2,
+                                            overflow=ft.TextOverflow.ELLIPSIS,
+                                        ),
+                                        ft.Container(height=4),
+                                        ft.Row(
+                                            [
+                                                ft.Icon(ft.Icons.VERIFIED, color="#4CAF50", size=14),
+                                                ft.Text(f"{verified_count} Verified", size=11, color=AppTheme.TEXT_SECONDARY),
+                                            ],
+                                            spacing=4,
+                                            alignment=ft.MainAxisAlignment.CENTER,
+                                        ),
                                     ],
                                     spacing=4,
-                                    alignment=ft.MainAxisAlignment.CENTER,
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 ),
-                                ft.Container(expand=True),
-                                ft.Container(
-                                    content=ft.ElevatedButton(
-                                        "View Profile",
-                                        icon=ft.Icons.PERSON,
-                                        bgcolor=AppTheme.PRIMARY,
-                                        color=ft.Colors.WHITE,
-                                        width=CARD_BUTTON_WIDTH,
-                                        style=ft.ButtonStyle(
-                                            shape=ft.RoundedRectangleBorder(radius=8),
+                                ft.Column(
+                                    [
+                                        ft.Container(
+                                            content=ft.ElevatedButton(
+                                                "View Profile",
+                                                icon=ft.Icons.PERSON,
+                                                bgcolor=AppTheme.PRIMARY,
+                                                color=ft.Colors.WHITE,
+                                                width=CARD_BUTTON_WIDTH,
+                                                style=ft.ButtonStyle(
+                                                    shape=ft.RoundedRectangleBorder(radius=8),
+                                                ),
+                                                on_click=lambda e, uid=user_id: self._view_profile(uid),
+                                            ),
+                                            alignment=ft.alignment.center,
                                         ),
-                                        on_click=lambda e, uid=user_id: self._view_profile(uid),
-                                    ),
-                                    alignment=ft.alignment.center,
-                                ),
-                                ft.Container(
-                                    content=ft.IconButton(
-                                        icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
-                                        icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
-                                        bgcolor=AppTheme.PRIMARY if is_selected else None,
-                                        tooltip="Remove from compare" if is_selected else "Compare",
-                                        on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
-                                    ),
-                                    alignment=ft.alignment.center,
+                                        ft.Container(
+                                            content=ft.IconButton(
+                                                icon=ft.Icons.CHECK if is_selected else ft.Icons.COMPARE_ARROWS,
+                                                icon_color=ft.Colors.WHITE if is_selected else AppTheme.PRIMARY,
+                                                bgcolor=AppTheme.PRIMARY if is_selected else None,
+                                                tooltip="Remove from compare" if is_selected else "Compare",
+                                                on_click=lambda e, uid=user_id, pos=position: self._toggle_compare(uid, pos),
+                                            ),
+                                            alignment=ft.alignment.center,
+                                        ),
+                                    ],
+                                    spacing=0,
+                                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 ),
                             ],
-                            spacing=4,
+                            spacing=0,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            alignment=ft.MainAxisAlignment.START,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         ),
                         padding=12,
+                        height=CARD_CONTENT_HEIGHT,
                         bgcolor=AppTheme.BG_PRIMARY if is_selected else None,
-                        expand=True,
                     ),
                 ],
                 spacing=0,
