@@ -557,9 +557,7 @@ class VoterDashboard(ft.Column):
                 icon_color=AppTheme.PRIMARY,
             )
         
-        # Create responsive cards using ResponsiveRow
-        # col breakpoints: xs (extra small), sm (small), md (medium), lg (large), xl (extra large)
-        # Values represent number of columns out of 12
+        # Use a wrapped row for predictable card alignment without ResponsiveRow flex casting issues.
         cards = []
         
         for politician in politicians:
@@ -586,23 +584,21 @@ class VoterDashboard(ft.Column):
                 is_selected=is_selected,
             )
             
-            # Wrap card in responsive container
-            # xs=12 (1 card per row on phones)
-            # sm=6 (2 cards per row on small tablets)
-            # md=4 (3 cards per row on tablets/small desktops)
-            # lg=3 (4 cards per row on desktops)
-            # xl=2 (6 cards per row on large screens)
-            responsive_card = ft.Container(
-                content=card,
-                col={"xs": 12, "sm": 6, "md": 4, "lg": 3, "xl": 2},
-            )
-            cards.append(responsive_card)
+            cards.append(card)
         
-        return ft.ResponsiveRow(cards, spacing=16, run_spacing=16)
+        return ft.Row(
+            controls=cards,
+            spacing=16,
+            run_spacing=16,
+            wrap=True,
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        )
     
     def _build_candidate_card(self, user_id, name, position, party, biography, image, verified_count, pending_count, is_selected=False):
         """Build a candidate card with consistent sizing"""
         # Fixed dimensions for consistent card layout
+        CARD_WIDTH = 200
         CARD_IMAGE_HEIGHT = 140
         CARD_MIN_HEIGHT = 380
         CARD_BUTTON_WIDTH = 150
@@ -615,19 +611,19 @@ class VoterDashboard(ft.Column):
                     src_base64=image,
                     fit=ft.ImageFit.COVER,
                     height=CARD_IMAGE_HEIGHT,
-                    width=float("inf"),
+                    width=CARD_WIDTH,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
                 height=CARD_IMAGE_HEIGHT,
-                width=float("inf"),
+                width=CARD_WIDTH,
             )
         else:
             profile_image = ft.Container(
                 content=ft.Icon(ft.Icons.PERSON, size=60, color=AppTheme.BORDER_COLOR),
                 bgcolor=AppTheme.BG_PRIMARY,
                 height=CARD_IMAGE_HEIGHT,
-                width=float("inf"),
+                width=CARD_WIDTH,
                 alignment=ft.alignment.center,
                 border_radius=ft.border_radius.only(top_left=12, top_right=12),
             )
@@ -709,7 +705,7 @@ class VoterDashboard(ft.Column):
                             ),
                         ],
                         height=CARD_IMAGE_HEIGHT,
-                        width=float("inf"),
+                        width=CARD_WIDTH,
                     ),
                     # Info section with fixed height
                     ft.Container(
@@ -802,6 +798,7 @@ class VoterDashboard(ft.Column):
                 spacing=0,
             ),
             height=CARD_MIN_HEIGHT,
+            width=CARD_WIDTH,
             bgcolor=ft.Colors.WHITE,
             border_radius=12,
             border=card_border,
