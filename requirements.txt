@@ -1,4 +1,6 @@
 flet==0.28.3
+flet_desktop==0.28.3
+flet_web==0.28.3
 bcrypt==4.0.0
 
 # Testing
