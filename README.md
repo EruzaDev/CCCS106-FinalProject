@@ -4,7 +4,7 @@ A cross-platform voting application built with Python Flet framework, designed t
 
 ## 🎯 Project Overview
 
-HonestBallot is a **local desktop voting platform** that demonstrates how technology can support electoral transparency. The system supports multiple user roles with specialized dashboards for different voting participants.
+HonestBallot is a **local voting platform** that can run in a web browser (default) or desktop window mode. The system supports multiple user roles with specialized dashboards for different voting participants.
 
 ### User Roles
 
@@ -61,10 +61,11 @@ HonestBallot is a **local desktop voting platform** that demonstrates how techno
 | **Testing** | pytest |
 
 ### Key Characteristics
-- **Local-Only:** Runs completely offline with SQLite database
+- **Local-Only:** Runs on your machine with SQLite database
 - **Multi-User Sessions:** Unique session tokens per user
 - **Pre-Configured Users:** Demo users ready to use
 - **Cross-Platform:** Works on Windows, macOS, Linux
+- **Web + Desktop:** Browser mode by default, desktop mode optional
 
 ## 📁 Project Structure
 
@@ -115,9 +116,14 @@ pip install -r requirements.txt
 # Initialize database with demo data
 python setup_db.py
 
-# Run the application
+# Run as web app (default)
 python main.py
+
+# Optional: run in desktop window mode
+python main.py --desktop
 ```
+
+By default, the app starts a local web server and opens in your browser at `http://localhost:8550`.
 
 ### Demo User Credentials
 

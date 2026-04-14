@@ -48,27 +48,30 @@ class HonestBallotApp:
         # Page configuration
         page.title = "HonestBallot - Local Voting App"
         page.bgcolor = ft.Colors.GREY_100
-        page.window.width = 1280
-        page.window.height = 800
-        page.window.min_width = 860   # Lowered to allow compact-screen use
-        page.window.min_height = 560
         page.padding = 0
         page.spacing = 0
 
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", APP_LOGO_ASSET)
-        if os.path.exists(icon_path):
-            try:
-                page.window.icon = icon_path
-            except Exception as exc:
-                print(f"ICON WARNING: Could not set window icon: {exc}")
-        
-        # Prevent window from accidentally closing
-        def on_window_event(e):
-            if e.data == "close":
-                print("Window close requested")
-                page.window.destroy()
-        
-        page.window.on_event = on_window_event
+        # Window APIs are desktop-only; avoid touching them in web mode.
+        if not page.web:
+            page.window.width = 1280
+            page.window.height = 800
+            page.window.min_width = 860   # Lowered to allow compact-screen use
+            page.window.min_height = 560
+
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", APP_LOGO_ASSET)
+            if os.path.exists(icon_path):
+                try:
+                    page.window.icon = icon_path
+                except Exception as exc:
+                    print(f"ICON WARNING: Could not set window icon: {exc}")
+
+            # Prevent window from accidentally closing.
+            def on_window_event(e):
+                if e.data == "close":
+                    print("Window close requested")
+                    page.window.destroy()
+
+            page.window.on_event = on_window_event
         
         # Store session manager in page data
         page.session.set("session_manager", self.session_manager)
@@ -620,9 +623,24 @@ def main(page: ft.Page):
         traceback.print_exc()
 
 
-if __name__ == "__main__":
-    import os
-    # Set shorter temp path to avoid Windows path length issues
-    os.environ["FLET_VIEW_PATH"] = "C:\\Temp\\flet"
-    # Use desktop mode to avoid browser issues
-    ft.app(target=main, view=ft.AppView.FLET_APP, assets_dir="assets")
+def _get_bind_config():
+    """Resolve host/port for cloud platforms that inject PORT env var."""
+    host = os.getenv("HOST", "0.0.0.0")
+    port_str = os.getenv("PORT", "8550")
+    try:
+        port = int(port_str)
+    except ValueError:
+        print(f"Invalid PORT value '{port_str}', falling back to 8550")
+        port = 8550
+    return host, port
+
+
+if __name__ == "__main__": 
+    host, port = _get_bind_config()
+    ft.app(
+        target=main,
+        view=ft.AppView.WEB_BROWSER,
+        assets_dir="assets",
+        host=host,
+        port=port,
+    )
