@@ -73,10 +73,6 @@ class HonestBallotApp:
 
             page.window.on_event = on_window_event
         
-        # Store session manager in page data
-        page.session.set("session_manager", self.session_manager)
-        page.session.set("db", self.db)
-        
         # Start with login page
         self.show_login_page()
     
@@ -418,9 +414,6 @@ class HonestBallotApp:
                     role=user["role"]
                 )
                 
-                # Store in page session
-                self.page.session.set("current_session", self.current_session)
-                
                 print(f"LOGIN: Routing to dashboard for role={user['role']}")
                 # Route based on role
                 if user["role"] == "comelec":
@@ -526,7 +519,6 @@ class HonestBallotApp:
             self.session_manager.end_session(self.current_session["token"])
         
         self.current_session = None
-        self.page.session.set("current_session", None)
         # Clear transient overlays before navigation to avoid view-removal race conditions.
         try:
             self.page.overlay.clear()
